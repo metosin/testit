@@ -58,7 +58,7 @@ or even:
   (facts "grouped"
     (+ 1 1) => 2
     true =not=> false
-     1 => pos?))
+    1 => pos?))
 ```
 
 ## TODO
