@@ -52,10 +52,10 @@ with `testit.facts`:
   (fact "1 is positive"
     1 => pos?))
 ```
-or:
+or even:
 ```clj
 (deftest my-tests
-  (facts "grouped
+  (facts "grouped"
     (+ 1 1) => 2
     true =not=> false
      1 => pos?))
