@@ -53,7 +53,7 @@ with `testit.facts`:
     1 => pos?))
 ```
 or:
-```
+```clj
 (deftest my-tests
   (facts "grouped
     (+ 1 1) => 2
