@@ -2,20 +2,63 @@
 
 **WIP** Midje style assertions for Clojure.test
 
-## Usage
+## Basics
+
+with Midje:
 
 ```clj
+(require '[midje.sweer :refer :all])
+
 (facts
   {:a 1 :z 1} => (contains {:a 1})
   {:a 1 :sub {:b 1 :foo :bar}} => (contains {:a 1 :sub (contains {:b 1})}))
+```
 
-; ==>
+with `testit.core`:
+
+```clj
+(require '[clojure.test :refer :all])
+(require '[testit.core :refer :all])
 
 (deftest same-test
   (is (same (contains {:a 1})
             {:a 1 :z 1})
   (is (same (contains {:a 1 :sub (contains {:b 1})})
             {:a 1 :sub {:b 1 :foo :bar}})))
+```
+
+## Facts
+
+with clojure.test:
+
+```clj
+(require '[clojure.test :refer :all])
+
+(deftest my-tests
+  (is (= s (+ 1 1)))
+  (is (not= false true))
+  (is (pos? 1) "1 is positive"))
+```
+
+with `testit.facts`:
+
+```clj
+(require '[clojure.test :refer :all])
+(require '[testit.facts :refer :all])
+
+(deftest my-tests
+  (fact (+ 1 1) => 2)
+  (fact true =not=> false)
+  (fact "1 is positive"
+    1 => pos?))
+```
+or:
+```
+(deftest my-tests
+  (facts "grouped
+    (+ 1 1) => 2
+    true =not=> false
+     1 => pos?))
 ```
 
 ## TODO
