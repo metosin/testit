@@ -16,8 +16,13 @@
 
 (declare =>)
 (defmethod assert-expr '=> [msg [_ & body]]
-  (assert-expr msg (concat (if-not (function? (first body)) (list '=)) body)))
+  (assert-expr msg (concat (if-not (function? (first body))
+                             (list '=))
+                           body)))
 
 (declare =not=>)
 (defmethod assert-expr '=not=> [msg [_ & body]]
-  (assert-expr msg (if (function? (first body)) (conj (rest body) `(~'complement ~(first body))) (conj body 'not=))))
+  (assert-expr msg (if (function? (first body))
+                     (conj (rest body)
+                           `(~'complement ~(first body)))
+                     (conj body 'not=))))
