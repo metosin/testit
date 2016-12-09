@@ -46,17 +46,16 @@
   [msg form]
   `(let [expected# ~(nth form 1)
          value# ~(nth form 2)
-         [only-expected# only-value# both#] (data/diff expected# value#)]
-     (if (seq only-expected#)
-       (do-report {:type :fail,
-                   :message ~msg
-                   :expected expected#,
-                   :actual (list
-                             '~'instead only-value#
-                             '~'missing only-expected#)})
+         [only-expected# only-value# _both#] (data/diff expected# value#)]
+     (if (and (nil? only-expected#)
+              (nil? only-value#))
        (do-report {:type :pass,
                    :message ~msg
                    :expected expected#,
-                   :actual both#}))))
+                   :actual value#})
+       (do-report {:type :fail,
+                   :message ~msg
+                   :expected (list '= expected# value#),
+                   :actual (list 'not (list '= expected# value#))}))))
 
 ; TODO: Extend clojure.test/report
