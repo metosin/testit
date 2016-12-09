@@ -1,5 +1,6 @@
 (ns testit.facts
-  (:require [clojure.test :refer :all]))
+  (:require [clojure.test :refer :all]
+            [testit.core]))
 
 (defn- name-and-body [form]
   (if (string? (first form)) ((juxt first rest) form) [nil form]))
