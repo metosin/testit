@@ -45,12 +45,18 @@
 (defmethod assert-expr 'same
   [msg form]
   `(let [expected# ~(nth form 1)
-         value#    ~(nth form 2)
+         value# ~(nth form 2)
          [only-expected# only-value# both#] (data/diff expected# value#)]
      (if (seq only-expected#)
-       (do-report {:type :fail, :message ~msg :expected expected#, :actual (list
-                                                                             '~'instead only-value#
-                                                                             '~'missing only-expected#)})
-       (do-report {:type :pass, :message ~msg :expected expected#, :actual both#}))))
+       (do-report {:type :fail,
+                   :message ~msg
+                   :expected expected#,
+                   :actual (list
+                             '~'instead only-value#
+                             '~'missing only-expected#)})
+       (do-report {:type :pass,
+                   :message ~msg
+                   :expected expected#,
+                   :actual both#}))))
 
 ; TODO: Extend clojure.test/report
