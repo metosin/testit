@@ -17,7 +17,7 @@
 (declare =>)
 (defmethod assert-expr '=> [msg [_ & body]]
   (assert-expr msg (concat (if-not (function? (first body))
-                             (list '=))
+                             (list 'same))
                            body)))
 
 (declare =not=>)
