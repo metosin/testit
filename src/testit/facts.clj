@@ -3,7 +3,10 @@
             [testit.core]))
 
 (defn- name-and-body [form]
-  (if (string? (first form)) ((juxt first rest) form) [nil form]))
+  (if (and (-> form first string?)
+           (-> form second #{'=> '=not=>} not))
+    ((juxt first rest) form)
+    [nil form]))
 
 (defmacro fact [& form]
   (let [[name [value arrow expected]] (name-and-body form)]
