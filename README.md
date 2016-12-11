@@ -199,9 +199,9 @@ with `=) or predicate functions.
     (throw e) =throws=> (ex-info? "oh no" {:reason "too lazy"}
     (throw e) =throws=> (ex-info? string? {:reason "too lazy"})
     (throw e) =throws=> (ex-info? string? (contains {:reason string?}))
-    (throw e) =throws=> (ex-info? anything {:reason "too lazy"})
-    (throw e) =throws=> (ex-info? "oh no" anything)
-    (throw e) =throws=> (ex-info? anything anything)))
+    (throw e) =throws=> (ex-info? any {:reason "too lazy"})
+    (throw e) =throws=> (ex-info? "oh no" any)
+    (throw e) =throws=> (ex-info? any any)))
 ```
 
 In the example above, all tests pass.

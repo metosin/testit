@@ -6,7 +6,7 @@
 ;; Common predicates:
 ;;
 
-(def anything (constantly true))
+(def any (constantly true))
 (defn truthy [v] (if v true false))
 (defn falsey [v] (if-not v true false))
 
