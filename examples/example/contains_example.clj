@@ -19,7 +19,7 @@
 
 (deftest test-google-response
   (fact
-    (http/get "http://google.com")
-    => (contains {:status 200
-                  :headers {"Content-Type" #(str/starts-with? % "text/html")}
-                  :body string?})))
+    (http/get "http://google.com") =>
+    (contains {:status 200
+               :headers {"Content-Type" #(str/starts-with? % "text/html")}
+               :body string?})))
