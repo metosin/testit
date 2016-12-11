@@ -1,6 +1,6 @@
 # testit
 
-(Midje)[https://github.com/marick/Midje] style assertions for `clojure.test`
+[Midje](https://github.com/marick/Midje) style assertions for `clojure.test`
 
 Clojars dependency: `[metosin/testit "0.1.0-SNAPSHOT"]`
 
