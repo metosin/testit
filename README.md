@@ -32,8 +32,6 @@ with Midje:
 
 with `testit.facts`:
 
-Add dependency to `[metosin/testit "0.1.0-SNAPSHOT"]`
-
 ```clj
 (ns example.midje-example
   (:require [clojure.test :refer :all]
@@ -109,9 +107,9 @@ test is performed against the evaluated function.
 The `=throws=>` arrow can be used to assert that the evaluation of the left side
 throws an exception. The right side of `=throws=>` can be:
 
-# Class extending `java.lang.Throwable`
-# On object impementing `java.lang.Throwable`
-# A predicate function
+1. Class extending `java.lang.Throwable`
+2. On object impementing `java.lang.Throwable`
+3. A predicate function
 
 If the right side is a class, the assertion is made to ensure that the left side
 throws an exception that is, or extends, the class on the right side.
