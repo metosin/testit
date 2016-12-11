@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
             [testit.facts :refer :all]
-            [testit.contains :refer [contains]]))
+            [testit.contains :refer [contains]]
+            [testit.ex-info :refer [ex-info?]]))
 
 (deftest basic-facts
   (facts
@@ -36,8 +37,14 @@
   (fact "Match exception class and message"
     (/ 1 0) =throws=> (java.lang.ArithmeticException. "Divide by zero"))
   (fact "Match against predicate"
-    (/ 1 0) =throws=> (fn [e]
-                        (str/starts-with? (.getMessage e) "Divide"))))
+    (/ 1 0) =throws=> #(-> % .getMessage (str/starts-with? "Divide")))
+  (let [ei (ex-info "oh no" {:reason "too lazy"})]
+    (facts "Special helper for ex-info"
+      (throw ei) =throws=> (ex-info? "oh no" {:reason "too lazy"})
+      (throw ei) =throws=> (ex-info? string? {:reason "too lazy"})
+      (throw ei) =throws=> (ex-info? string? (contains {:reason string?}))
+      (throw ei) =throws=> (ex-info? nil {:reason "too lazy"})
+      (throw ei) =throws=> (ex-info? "oh no" nil))))
 
 ; deftest macro disrupts macroexpand-1 somehow, that's why these are
 ; evaluated in here:

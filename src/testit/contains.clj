@@ -31,4 +31,3 @@
   {:pre [(map? expected)]}
   (fn [actual]
     (deep-compare actual expected)))
-
