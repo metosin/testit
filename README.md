@@ -23,7 +23,7 @@ with Midje:
 
 ```clj
 (ns some.midje.tests 
-  (:require [midje.sweer :refer :all]))
+  (:require [midje.sweet :refer :all]))
 
 (facts
   (+ 1 2) => 3
@@ -35,8 +35,7 @@ with `testit.facts`:
 ```clj
 (ns example.midje-example
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]
-            [testit.contains :refer [contains]]))
+            [testit.facts :refer :all]))
 
 (deftest midje-impersonation
   (facts
@@ -107,9 +106,9 @@ test is performed against the evaluated function.
 The `=throws=>` arrow can be used to assert that the evaluation of the left side
 throws an exception. The right side of `=throws=>` can be:
 
-1. Class extending `java.lang.Throwable`
-2. On object impementing `java.lang.Throwable`
-3. A predicate function
+* Class extending `java.lang.Throwable`
+* On object impementing `java.lang.Throwable`
+* A predicate function
 
 If the right side is a class, the assertion is made to ensure that the left side
 throws an exception that is, or extends, the class on the right side.
@@ -139,7 +138,7 @@ Finally, you can provide your own function to perform your custom comparion.
 
 Very often you want to test that the left side evaluates to a map with
 some required key/value pairs. To help writing this kind of tests the
-`testit` provides a function `testit.contains/contains`. Here's a quic
+`testit` provides a function `testit.contains/contains`. Here's a quick
 example:
 
 ```clj
@@ -173,10 +172,9 @@ an example.
 ```clj
 (ns example.contains-example
   (:require [clojure.test :refer :all]
-            [clojure.string :as str]
-            [clj-http.client :as http]
             [testit.facts :refer :all]
-            [testit.contains :refer [contains]]))
+            [clojure.string :as str]
+            [clj-http.client :as http]))
 
 (deftest test-google-response
   (fact

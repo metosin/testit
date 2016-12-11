@@ -1,9 +1,7 @@
 (ns testit.facts-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
-            [testit.facts :refer :all]
-            [testit.contains :refer [contains]]
-            [testit.ex-info :refer [ex-info?]]))
+            [testit.facts :refer :all]))
 
 (deftest basic-facts
   (facts

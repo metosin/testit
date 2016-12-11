@@ -1,5 +1,10 @@
 (ns testit.facts
-  (:require [clojure.test :refer :all]))
+  (:require [clojure.test :refer :all])
+  (:import (clojure.lang ExceptionInfo)))
+
+;;
+;; fact and facts macros:
+;;
 
 (defn- name-and-body [form]
   (if (and (-> form first string?)
@@ -16,6 +21,10 @@
     `(testing ~name
        ~@(for [[value arrow expected] (partition 3 body)]
            `(fact ~value ~arrow ~expected)))))
+
+;;
+;; Extending clojure.test for =>, =not=> and =throw=>
+;;
 
 (defn- expected-fn? [body]
   (or (and (seq? body)
@@ -52,3 +61,62 @@
                       ~@body
                       (catch Throwable ex#
                         (exception-match? ~e ex#)))))
+
+;;
+;; ex-info helper:
+;;
+
+(defn ex-info? [message data]
+  {:pre [(or (nil? message)
+             (string? message)
+             (fn? message))
+         (or (nil? data)
+             (map? data)
+             (fn? data))]}
+  (let [message-check (cond
+                        (nil? message) (constantly true)
+                        (string? message) (partial = message)
+                        (fn? message) message)
+        data-check (cond
+                     (nil? data) (constantly true)
+                     (map? data) =
+                     (fn? data) data)]
+    (fn [e]
+      (and (instance? ExceptionInfo e)
+           (message-check (.getMessage ^ExceptionInfo e))
+           (data-check (.getData ^ExceptionInfo e))))))
+
+;;
+;; contains helper:
+;;
+
+(defn- get! [m k]
+  (if (contains? m k)
+    (get m k)
+    (reduced false)))
+
+(defn- deep-compare [actual expected]
+  (reduce-kv (fn [_ expected-k expected-v]
+               (let [actual-v (get! actual expected-k)]
+                 (or (cond
+                       ; they are equal?
+                       (= expected-v actual-v)
+                       true
+                       ; both are maps, go deeper:
+                       (and (map? expected-v)
+                            (map? actual-v))
+                       (deep-compare actual-v expected-v)
+                       ; expected is fn?
+                       (or (symbol? expected-v)
+                           (fn? expected-v))
+                       (expected-v actual-v)
+                       ; none of the above, fail:
+                       :else false)
+                     (reduced false))))
+             false
+             expected))
+
+(defn contains [expected]
+  {:pre [(map? expected)]}
+  (fn [actual]
+    (deep-compare actual expected)))

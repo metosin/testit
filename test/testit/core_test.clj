@@ -1,6 +1,6 @@
 (ns testit.core-test
   (:require [clojure.test :refer :all]
-            [testit.contains :refer :all]))
+            [testit.facts :refer :all]))
 
 (deftest contains-test
   (testing "basics"

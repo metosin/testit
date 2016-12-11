@@ -1,7 +1,6 @@
 (ns example.midje-example
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]
-            [testit.contains :refer [contains]]))
+            [testit.facts :refer :all]))
 
 (deftest midje-impersonation
   (facts

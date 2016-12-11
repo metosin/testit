@@ -2,9 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
             [clj-http.client :as http]
-            [testit.facts :refer :all]
-            [testit.ex-info :refer [ex-info?]]
-            [testit.contains :refer [contains]]))
+            [testit.facts :refer :all]))
 
 (deftest basics-test
   (fact

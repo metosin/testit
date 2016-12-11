@@ -1,9 +1,7 @@
 (ns example.throws-example
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
-            [testit.facts :refer :all]
-            [testit.ex-info :refer [ex-info?]]
-            [testit.contains :refer [contains]]))
+            [testit.facts :refer :all]))
 
 (deftest =throws=>-examples
   (fact "Match exception class"
