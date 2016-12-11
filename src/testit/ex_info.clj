@@ -2,6 +2,12 @@
   (:import (clojure.lang ExceptionInfo)))
 
 (defn ex-info? [message data]
+  {:pre [(or (nil? message)
+             (string? message)
+             (fn? message))
+         (or (nil? data)
+             (map? data)
+             (fn? data))]}
   (let [message-check (cond
                         (nil? message) (constantly true)
                         (string? message) (partial = message)
