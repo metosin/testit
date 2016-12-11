@@ -45,14 +45,11 @@
 ;; Extending clojure.test for =>, =not=> and =throw=>
 ;;
 
+(def ^:private sym-fn-or-seq? (some-fn symbol? fn? seq?))
+
 (defn- expected-fn? [body]
-  (or (and (seq? body)
-           (or (symbol? (first body))
-               (fn? (first body))))
-      (and (seq? body)
-           (seq? (first body))
-           (or (symbol? (ffirst body))
-               (fn? (ffirst body))))))
+  (and (-> body seq?)
+       (-> body first sym-fn-or-seq?)))
 
 (declare =>)
 (defmethod assert-expr '=> [msg [_ & body]]
