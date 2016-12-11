@@ -1,8 +1,20 @@
 # testit
 
-**WIP** Midje style assertions for Clojure.test
+(Midje)[https://github.com/marick/Midje] style assertions for `clojure.test`
 
-## Basics
+# Goals and non-goals
+
+*Goals:*
+
+* Allow writing tests in Midje style with `=>` and `=not=>`
+* Use (and extends) `clojure.test`
+
+*Non-goals:*
+
+* Does not provide 100% compatibility with Midje
+* Does not improve output
+
+## Quick intro for Midje users
 
 with Midje:
 
@@ -10,55 +22,55 @@ with Midje:
 (require '[midje.sweer :refer :all])
 
 (facts
-  {:a 1 :z 1} => (contains {:a 1})
-  {:a 1 :sub {:b 1 :foo :bar}} => (contains {:a 1 :sub (contains {:b 1})}))
-```
-
-with `testit.core`:
-
-```clj
-(require '[clojure.test :refer :all])
-(require '[testit.core :refer :all])
-
-(deftest same-test
-  (is (same (contains {:a 1})
-            {:a 1 :z 1})
-  (is (same (contains {:a 1 :sub (contains {:b 1})})
-            {:a 1 :sub {:b 1 :foo :bar}})))
-```
-
-## Facts
-
-with clojure.test:
-
-```clj
-(require '[clojure.test :refer :all])
-
-(deftest my-tests
-  (is (= s (+ 1 1)))
-  (is (not= false true))
-  (is (pos? 1) "1 is positive"))
+  (+ 1 2) => 3
+  {:a 1 :z 1} => (contains {:a 1}))
 ```
 
 with `testit.facts`:
 
-```clj
-(require '[clojure.test :refer :all])
-(require '[testit.facts :refer :all])
+Add dependency to `[metosin/testit "0.1.0-SNAPSHOT"]`
 
-(deftest my-tests
-  (fact (+ 1 1) => 2)
-  (fact true =not=> false)
-  (fact "1 is positive"
-    1 => pos?))
-```
-or even:
 ```clj
-(deftest my-tests
-  (facts "grouped"
-    (+ 1 1) => 2
-    true =not=> false
-    1 => pos?))
+(require '[clojure.test :refer [deftest])
+(require '[testit.facts :refer [facts])
+(require '[testit.core :refer [contains])
+
+(deftest midje-impersonation
+  (facts
+    (+ 1 2) => 3
+    {:a 1 :z 1} => (contains {:a 1})))
+```
+
+## More realistic example:
+
+Assuming you have function `GET` that calls your REST service, you
+could write a test like this:
+
+```clj
+(ns app.rest-test
+  (:require [clojure.test :refer :all]
+            [testit.facts :refer [facts]]
+            [testit.response :as r]
+            [app.rest :refer [GET]]))
+
+(deftest hello-returns-with-200
+  (let [response (GET "/hello")]
+    (facts
+      response => (r/status 200)
+      response => (r/content-type "text/plain")
+      response => (r/body string?))))
+```
+
+
+## How does it work?
+
+`testit` uses `clojure.test/assert-expr` to add support for `=>` and `=not=>`
+symbols and the `testit.facts/fact` and `testit.facts/facts` macros generate 
+`clojure.test/is` forms.
+
+```clj
+(macroexpand-1 '(fact (+ 1 2) => 3))
+=> (clojure.test/is (=> 3 (+ 1 2)) "(+ 1 2) => 3")
 ```
 
 ## TODO

@@ -1,10 +1,9 @@
 (ns testit.facts
-  (:require [clojure.test :refer :all]
-            [testit.core]))
+  (:require [clojure.test :refer :all]))
 
 (defn- name-and-body [form]
   (if (and (-> form first string?)
-           (-> form second #{'=> '=not=>} not))
+           (-> form count (mod 3) (= 1)))
     ((juxt first rest) form)
     [nil form]))
 
@@ -20,20 +19,36 @@
 
 (defn- expected-fn? [body]
   (or (and (seq? body)
-           (symbol? (first body)))
+           (or (symbol? (first body))
+               (fn? (first body))))
       (and (seq? body)
            (seq? (first body))
-           (symbol? (ffirst body)))))
+           (or (symbol? (ffirst body))
+               (fn? (ffirst body))))))
 
 (declare =>)
 (defmethod assert-expr '=> [msg [_ & body]]
   (assert-expr msg (if (expected-fn? body)
                      body
-                     (cons 'same body))))
+                     (cons `= body))))
 
 (declare =not=>)
 (defmethod assert-expr '=not=> [msg [_ & body]]
-  (assert-expr msg (if (expected-fn? body)
-                     (cons `not (list body))
-                     ; TODO: can't use 'same here
-                     (cons `not (list (cons `= body))))))
+  (assert-expr msg (cons `not (list (if (expected-fn? body)
+                                      body
+                                      (cons `= body))))))
+
+(defn exception-match? [expected exception]
+  (cond
+    (class? expected) (instance? expected exception)
+    (instance? Throwable expected) (and (instance? (class expected) exception)
+                                        (= (.getMessage expected)
+                                           (.getMessage exception)))
+    (fn? expected) (expected exception)))
+
+(declare =throws=>)
+(defmethod assert-expr '=throws=> [msg [_ e & body]]
+  (assert-expr msg `(try
+                      ~@body
+                      (catch Throwable ex#
+                        (exception-match? ~e ex#)))))
