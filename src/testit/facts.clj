@@ -15,8 +15,7 @@
 ;;
 
 (defn- name-and-body [form]
-  (if (and (-> form first string?)
-           (-> form count (mod 3) (= 1)))
+  (if (-> form first string?)
     ((juxt first rest) form)
     [nil form]))
 
@@ -29,6 +28,14 @@
     `(testing ~name
        ~@(for [[value arrow expected] (partition 3 body)]
            `(fact ~value ~arrow ~expected)))))
+
+(defmacro facts-for [& forms]
+  (let [[name [form-to-test & fact-forms]] (name-and-body forms)
+        result (gensym)]
+    `(testing ~name
+       (let [~result ~form-to-test]
+         ~@(for [[arrow expected] (partition 2 fact-forms)]
+             `(fact ~result ~arrow ~expected))))))
 
 ;;
 ;; Extending clojure.test for =>, =not=> and =throw=>
