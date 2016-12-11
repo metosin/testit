@@ -41,8 +41,8 @@
       (throw ei) =throws=> (ex-info? "oh no" {:reason "too lazy"})
       (throw ei) =throws=> (ex-info? string? {:reason "too lazy"})
       (throw ei) =throws=> (ex-info? string? (contains {:reason string?}))
-      (throw ei) =throws=> (ex-info? nil {:reason "too lazy"})
-      (throw ei) =throws=> (ex-info? "oh no" nil))))
+      (throw ei) =throws=> (ex-info? anything {:reason "too lazy"})
+      (throw ei) =throws=> (ex-info? "oh no" anything))))
 
 ; deftest macro disrupts macroexpand-1 somehow, that's why these are
 ; evaluated in here:

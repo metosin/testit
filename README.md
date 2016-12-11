@@ -191,7 +191,7 @@ Using `clojure.core/ex-info` to generate an exception is quite common, so
 
 The `testit.ex-info/ex-info?` function acceps two parameters. First is user to
 test the exception message, second the message data. Both can be values (tested
-with `=), predicate functions, or nil (for ignoring the value).
+with `=) or predicate functions.
 
 ```clj
 (let [e (ex-info "oh no" {:reason "too lazy"})]
@@ -199,9 +199,9 @@ with `=), predicate functions, or nil (for ignoring the value).
     (throw e) =throws=> (ex-info? "oh no" {:reason "too lazy"}
     (throw e) =throws=> (ex-info? string? {:reason "too lazy"})
     (throw e) =throws=> (ex-info? string? (contains {:reason string?}))
-    (throw e) =throws=> (ex-info? nil {:reason "too lazy"})
-    (throw e) =throws=> (ex-info? "oh no" nil)
-    (throw e) =throws=> (ex-info? nil nil)))
+    (throw e) =throws=> (ex-info? anything {:reason "too lazy"})
+    (throw e) =throws=> (ex-info? "oh no" anything)
+    (throw e) =throws=> (ex-info? anything anything)))
 ```
 
 In the example above, all tests pass.

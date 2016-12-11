@@ -3,6 +3,14 @@
   (:import (clojure.lang ExceptionInfo)))
 
 ;;
+;; Common predicates:
+;;
+
+(def anything (constantly true))
+(defn truthy [v] (if v true false))
+(defn falsey [v] (if-not v true false))
+
+;;
 ;; fact and facts macros:
 ;;
 
@@ -73,14 +81,12 @@
          (or (nil? data)
              (map? data)
              (fn? data))]}
-  (let [message-check (cond
-                        (nil? message) (constantly true)
-                        (string? message) (partial = message)
-                        (fn? message) message)
-        data-check (cond
-                     (nil? data) (constantly true)
-                     (map? data) =
-                     (fn? data) data)]
+  (let [message-check (if (fn? message)
+                        message
+                        (partial = message))
+        data-check (if (fn? data)
+                     data
+                     (partial = data))]
     (fn [e]
       (and (instance? ExceptionInfo e)
            (message-check (.getMessage ^ExceptionInfo e))
