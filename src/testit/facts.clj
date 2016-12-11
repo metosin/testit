@@ -15,7 +15,8 @@
 ;;
 
 (defn- name-and-body [form]
-  (if (-> form first string?)
+  (if (and (-> form first string?)
+           (-> form count (mod 3) (= 1)))
     ((juxt first rest) form)
     [nil form]))
 
@@ -30,7 +31,10 @@
            `(fact ~value ~arrow ~expected)))))
 
 (defmacro facts-for [& forms]
-  (let [[name [form-to-test & fact-forms]] (name-and-body forms)
+  (let [[name [form-to-test & fact-forms]] (if (and (-> forms first string?)
+                                                    (-> forms count dec (mod 2) (= 1)))
+                                             ((juxt first rest) forms)
+                                             [nil forms])
         result (gensym)]
     `(testing ~name
        (let [~result ~form-to-test]

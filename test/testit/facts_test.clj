@@ -56,7 +56,7 @@
             (=> string? "foo")
             "foo is a string")
          expanded-form-with-name))
-  #_(is (= '(clojure.test/is
+  (is (= '(clojure.test/is
             (=> string? "foo")
             "foo => string?")
          expanded-form-without-name)))
@@ -65,4 +65,16 @@
   (facts-for "multiple tests againts one value"
     42
     => integer?
-    => pos?))
+    => pos?)
+  (facts-for
+    42
+    => integer?
+    => pos?
+    =not=> string?
+    => any
+    => truthy
+    =not=> falsey)
+  (facts-for
+    "foo"
+    => string?
+    => "foo"))
