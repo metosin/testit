@@ -10,6 +10,10 @@
   (facts
     (* 21 2) => integer?))
 
+(deftest generate-predicate
+  (facts
+    (* 21 2) => (partial > 1337)))
+
 (defn close-enough [expected-value margin]
   (fn [result]
     (<= (- expected-value margin) result (+ expected-value margin))))

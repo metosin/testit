@@ -54,24 +54,22 @@
       (throw ei) =throws=> (ex-info? "oh no" any))))
 
 (deftest test-excption-causes
-  (let [t (fn []
-            (->> (RuntimeException. "1")
-                 (RuntimeException. "2")
-                 (RuntimeException. "3")
-                 (throw)))]
-    (fact
-      (t) =throws=> [(RuntimeException. "3")
-                     (RuntimeException. "2")
-                     (RuntimeException. "1")]))
-  (let [t (fn []
-            (->> (ex-info "1" {:n 1 :a 42})
-                 (ex-info "2" {:n 2 :a 42})
-                 (ex-info "3" {:n 3 :a 42})
-                 (throw)))]
-    (fact
-      (t) =throws=> [(ex-info? "3" {:n 3})
-                     (ex-info? any any)
-                     (ex-info? any {:a 42})])))
+  (fact
+    (->> (java.lang.ArithmeticException. "3")
+         (java.lang.RuntimeException. "2")
+         (java.util.concurrent.ExecutionException. "1")
+         (throw))
+    =throws=> [(Exception. "1")
+               (Exception. "2")
+               (Exception. "3")])
+  (fact
+    (->> (ex-info "1" {:n 1 :a 42})
+         (ex-info "2" {:n 2 :a 42})
+         (ex-info "3" {:n 3 :a 42})
+         (throw))
+    =throws=> [(ex-info? "3" {:n 3})
+               (ex-info? any any)
+               (ex-info? any {:a 42})]))
 
 ; deftest macro disrupts macroexpand-1 somehow, that's why these are
 ; evaluated in here:

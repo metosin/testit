@@ -79,8 +79,8 @@ values for equality (or non-equality in case of `=not=>`).
     (* 21 2) => 42))
 ```
 
-The right side of `=>` can also be a symbol to a function. In that case the test is 
-performed by passing the value of the left side to the function.
+The right side of `=>` can also be a predicate function. In that case the test is 
+performed by passing the value of the left side to the predicate.
 
 ```clj
 (deftest function-predicate
@@ -88,8 +88,15 @@ performed by passing the value of the left side to the function.
     (* 21 2) => integer?))
 ```
 
-Finally, the right side can also be a list form with a function call. In that case, the 
-test is performed against the evaluated function.
+A common practice is to call function that returns a predicate. For example:
+
+```clj
+(deftest generate-predicate
+  (facts
+    (* 21 2) => (partial > 1337)))
+```
+
+A bit more complex example:
  
 ```clj
 (defn close-enough [expected-value margin]
@@ -106,9 +113,10 @@ test is performed against the evaluated function.
 The `=throws=>` arrow can be used to assert that the evaluation of the left side
 throws an exception. The right side of `=throws=>` can be:
 
-* Class extending `java.lang.Throwable`
-* On object impementing `java.lang.Throwable`
+* A class extending `java.lang.Throwable`
+* An object extending `java.lang.Throwable`
 * A predicate function
+* A seq of the above
 
 If the right side is a class, the assertion is made to ensure that the left side
 throws an exception that is, or extends, the class on the right side.
@@ -118,21 +126,67 @@ throws an exception that is, or extends, the class on the right side.
   (/ 1 0) =throws=> java.lang.ArithmeticException)
 ```
 
-Second case ensures that the exception type is, or extends, the type of the right
-side and also that the message of the exception equals that of the message on right
-side.
+You can also use an exception object. This ensures that the exception is of correct type, 
+and also that the message of the exception equals that of the message on right side.
 
 ```clj
 (fact "Match exception class and message"
   (/ 1 0) =throws=> (java.lang.ArithmeticException. "Divide by zero"))
 ```
 
-Finally, you can provide your own function to perform your custom comparion.
+Most flexible case is to use a predicate function.
 
 ```clj
 (fact "Match against predicate"
   (/ 1 0) =throws=> #(-> % .getMessage (str/starts-with? "Divide")))
 ```
+
+Finally, `=throws=>` supports a sequence. The thrown exception is tested against the
+first element from the seq, and it's cause to the second, snd so on. This is very
+handy when the actual exception you are interested is wrapped into another exception,
+for example to `java.util.concurrent.ExecutionException`.
+
+This example creates an `java.lang.ArithmeticException`, wrapped into a `java.lang.RuntimeException`,
+wrapped into a `java.util.concurrent.ExecutionException`. 
+
+The `fact` then tests that the left side throws an exception that extends `java.lang.Exception` and 
+has a message `"1"`, and that is caused by another exception, also extending `java.lang.Exception`
+with message `"2"`, that is caused yet another exception, this time with message `"3"`:
+
+```clj
+(fact
+  (->> (java.lang.ArithmeticException. "3")
+       (java.lang.RuntimeException. "2")
+       (java.util.concurrent.ExecutionException. "1")
+       (throw))
+  =throws=> [(Exception. "1")
+             (Exception. "2")
+             (Exception. "3")])
+```
+
+Clojure code use exceptions generated with `clojure.core/ex-info` very often. To help with
+these kind of exceptions, `testit` provides a function `testit.facts/ex-info?`. The function
+accepts a message (string or a predicate) and a data (map or a predicate), and returns a predicate
+that tests given exception type (must extend `clojure.lang.IExceptionInfo`), message and data.
+
+```clj
+(fact "Match ex-info exceptions"
+  (throw (ex-info "oh no" {:reason "too lazy"}))
+  =throws=>
+  (ex-info? "oh no" any))
+```
+
+The above test ensures that the left side throws an `ex-info` exception with a message `"oh no"`
+and anything as data. Nothe that for anythingnes we used `testit.facts/any` predicate, which is
+implemented like this:
+
+```clj
+; in ns testit.facts:
+(def any (constantly true))
+```
+
+Other helper predicates are `testit.facts/truthy` and `testit.facts/falsey` which test given
+values for clojure 'truthines' and 'falsines' respectively.
 
 ## `contains`
 
@@ -184,27 +238,23 @@ an example.
                   :body string?})))
 ```
 
-## Helper for `clojure.core/ex-info`
+## Extend via functions
 
-Using `clojure.core/ex-info` to generate an exception is quite common, so
-`testit` includes an helper for that.
+The `testit` is designed to be easily extendable using plain old functions. You
+can provide your own predicates, and combine your predicates with those provided
+by `clojure.core` and `testit`.
 
-The `testit.ex-info/ex-info?` function acceps two parameters. First is user to
-test the exception message, second the message data. Both can be values (tested
-with `=) or predicate functions.
+Here's an example that combines `contains` and `ex-info?`: 
 
 ```clj
-(let [e (ex-info "oh no" {:reason "too lazy"})]
-  (facts
-    (throw e) =throws=> (ex-info? "oh no" {:reason "too lazy"}
-    (throw e) =throws=> (ex-info? string? {:reason "too lazy"})
-    (throw e) =throws=> (ex-info? string? (contains {:reason string?}))
-    (throw e) =throws=> (ex-info? any {:reason "too lazy"})
-    (throw e) =throws=> (ex-info? "oh no" any)
-    (throw e) =throws=> (ex-info? any any)))
+(fact "Match ex-info exceptions with combine"
+  (throw (ex-info "oh no" {:reason "too lazy"}))
+  =throws=>
+  (ex-info? any (contains {:reason string?})))
 ```
 
-In the example above, all tests pass.
+This tests that the left side throws an `ex-info` exception, with any
+message and a data that contains at least a `:reason` that must be a string.
 
 ## Extending `testit` with your own arrows
 
@@ -239,7 +289,7 @@ In the example above, the first fact passes but the second fails after 1 sec.
 
 ## TODO
 
-- [ ] Detect and complain about common mistakes
+- [ ] Detect and complain about common mistakes like using multile `=>` forms with `fact`
 - [ ] Provide better error messages when right side is a predicate
 - [ ] Devise way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
 
