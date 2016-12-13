@@ -68,13 +68,22 @@
                                       body
                                       (cons `= body))))))
 
+(defn cause-seq [^Throwable exception]
+  (if exception
+    (lazy-seq
+      (cons exception
+            (cause-seq (.getCause exception))))))
+
 (defn exception-match? [expected exception]
   (cond
     (class? expected) (instance? expected exception)
     (instance? Throwable expected) (and (instance? (class expected) exception)
                                         (= (.getMessage expected)
                                            (.getMessage exception)))
-    (fn? expected) (expected exception)))
+    (fn? expected) (expected exception)
+    (seq expected) (->> (map vector expected (cause-seq exception))
+                        (every? (fn [[exp exc]]
+                                  (exception-match? exp exc))))))
 
 (declare =throws=>)
 (defmethod assert-expr '=throws=> [msg [_ e & body]]

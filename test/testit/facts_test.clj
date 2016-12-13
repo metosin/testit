@@ -53,6 +53,17 @@
       (throw ei) =throws=> (ex-info? any {:reason "too lazy"})
       (throw ei) =throws=> (ex-info? "oh no" any))))
 
+(deftest test-excption-causes
+  (let [t (fn []
+            (->> (RuntimeException. "1")
+                 (RuntimeException. "2")
+                 (RuntimeException. "3")
+                 (throw)))]
+    (fact
+      (t) =throws=> [(RuntimeException. "3")
+                     (RuntimeException. "2")
+                     (RuntimeException. "1")])))
+
 ; deftest macro disrupts macroexpand-1 somehow, that's why these are
 ; evaluated in here:
 (def expanded-form-with-name (macroexpand-1 '(fact "foo is a string"
