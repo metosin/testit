@@ -62,7 +62,16 @@
     (fact
       (t) =throws=> [(RuntimeException. "3")
                      (RuntimeException. "2")
-                     (RuntimeException. "1")])))
+                     (RuntimeException. "1")]))
+  (let [t (fn []
+            (->> (ex-info "1" {:n 1 :a 42})
+                 (ex-info "2" {:n 2 :a 42})
+                 (ex-info "3" {:n 3 :a 42})
+                 (throw)))]
+    (fact
+      (t) =throws=> [(ex-info? "3" {:n 3})
+                     (ex-info? any any)
+                     (ex-info? any {:a 42})])))
 
 ; deftest macro disrupts macroexpand-1 somehow, that's why these are
 ; evaluated in here:

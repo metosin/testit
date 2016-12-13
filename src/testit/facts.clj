@@ -1,6 +1,6 @@
 (ns testit.facts
   (:require [clojure.test :refer :all])
-  (:import (clojure.lang ExceptionInfo)))
+  (:import (clojure.lang IExceptionInfo)))
 
 ;;
 ;; Common predicates:
@@ -144,9 +144,9 @@
                         (partial = message))
         data-check (if (fn? data)
                      data
-                     (partial = data))]
+                     (contains data))]
     (fn [e]
-      (and (instance? ExceptionInfo e)
-           (message-check (.getMessage ^ExceptionInfo e))
-           (data-check (.getData ^ExceptionInfo e))))))
+      (and (instance? IExceptionInfo e)
+           (message-check (.getMessage ^Throwable e))
+           (data-check (.getData ^IExceptionInfo e))))))
 
