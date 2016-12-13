@@ -51,10 +51,15 @@
   (and (-> body seq?)
        (-> body first sym-fn-or-seq?)))
 
+(defn invoke [f & args]
+  (if (fn? f)
+    (apply f args)
+    (= f (first args))))
+
 (declare =>)
 (defmethod assert-expr '=> [msg [_ & body]]
   (assert-expr msg (if (expected-fn? body)
-                     body
+                     (cons `invoke body)
                      (cons `= body))))
 
 (declare =not=>)

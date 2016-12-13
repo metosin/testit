@@ -13,7 +13,16 @@
     [1 2 3] => vector?
 
     42 =not=> 1337
-    [1 2 3] =not=> string?))
+    [1 2 3] =not=> string?)
+
+  (let [answer 42
+        half 21]
+    (facts
+      42 => pos?
+      42 => (partial > 1337)
+      42 => (* 2 21)
+      42 => answer
+      42 => (* half 2))))
 
 (deftest facts-can-be-named
   (fact "42 is the answer"
