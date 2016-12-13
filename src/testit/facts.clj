@@ -94,28 +94,6 @@
                         (exception-match? ~e ex#)))))
 
 ;;
-;; ex-info helper:
-;;
-
-(defn ex-info? [message data]
-  {:pre [(or (nil? message)
-             (string? message)
-             (fn? message))
-         (or (nil? data)
-             (map? data)
-             (fn? data))]}
-  (let [message-check (if (fn? message)
-                        message
-                        (partial = message))
-        data-check (if (fn? data)
-                     data
-                     (partial = data))]
-    (fn [e]
-      (and (instance? ExceptionInfo e)
-           (message-check (.getMessage ^ExceptionInfo e))
-           (data-check (.getData ^ExceptionInfo e))))))
-
-;;
 ;; contains helper:
 ;;
 
@@ -149,3 +127,26 @@
   {:pre [(map? expected)]}
   (fn [actual]
     (deep-compare actual expected)))
+
+;;
+;; ex-info helper:
+;;
+
+(defn ex-info? [message data]
+  {:pre [(or (nil? message)
+             (string? message)
+             (fn? message))
+         (or (nil? data)
+             (map? data)
+             (fn? data))]}
+  (let [message-check (if (fn? message)
+                        message
+                        (partial = message))
+        data-check (if (fn? data)
+                     data
+                     (partial = data))]
+    (fn [e]
+      (and (instance? ExceptionInfo e)
+           (message-check (.getMessage ^ExceptionInfo e))
+           (data-check (.getData ^ExceptionInfo e))))))
+
