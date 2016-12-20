@@ -24,6 +24,16 @@
       42 => answer
       42 => (* half 2))))
 
+(deftest some-regressions
+  (let [a "a"]
+    (fact
+      a => a))
+
+  (let [a "a"
+        b "b"]
+    (fact
+      a =not=> b)))
+
 (deftest facts-can-be-named
   (fact "42 is the answer"
     42 => integer?)
@@ -51,7 +61,8 @@
       (throw ei) =throws=> (ex-info? string? {:reason "too lazy"})
       (throw ei) =throws=> (ex-info? string? (contains {:reason string?}))
       (throw ei) =throws=> (ex-info? any {:reason "too lazy"})
-      (throw ei) =throws=> (ex-info? "oh no" any))))
+      (throw ei) =throws=> (ex-info? "oh no" any)
+      (throw ei) =throws=> {:reason string?})))
 
 (deftest test-excption-causes
   (fact

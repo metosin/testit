@@ -1,6 +1,6 @@
 (ns testit.facts
   (:require [clojure.test :refer :all])
-  (:import (clojure.lang IExceptionInfo)))
+  (:import (clojure.lang IExceptionInfo ILookup Associative)))
 
 ;;
 ;; Common predicates:
@@ -9,6 +9,40 @@
 (def any (constantly true))
 (defn truthy [v] (if v true false))
 (defn falsey [v] (if-not v true false))
+
+;;
+;; Utils:
+;;
+
+(defn- get! [m k]
+  (if (contains? m k)
+    (get m k)
+    (reduced false)))
+
+(defn- map-like? [v]
+  (and (instance? ILookup v)
+       (instance? Associative v)))
+
+(defn- deep-compare [actual expected]
+  (reduce-kv (fn [_ expected-k expected-v]
+               (let [actual-v (get! actual expected-k)]
+                 (or (cond
+                       ; they are equal?
+                       (= expected-v actual-v)
+                       true
+                       ; both are map-like, go deeper:
+                       (and (map-like? expected-v)
+                            (map-like? actual-v))
+                       (deep-compare actual-v expected-v)
+                       ; expected is fn?
+                       (or (symbol? expected-v)
+                           (fn? expected-v))
+                       (expected-v actual-v)
+                       ; none of the above, fail:
+                       :else false)
+                     (reduced false))))
+             false
+             expected))
 
 ;;
 ;; fact and facts macros:
@@ -81,6 +115,8 @@
                                         (= (.getMessage expected)
                                            (.getMessage exception)))
     (fn? expected) (expected exception)
+    (map? expected) (and (instance? IExceptionInfo exception)
+                         (deep-compare (.getData ^IExceptionInfo exception) expected))
     (seq expected) (->> (map vector expected (cause-seq exception))
                         (every? (fn [[exp exc]]
                                   (exception-match? exp exc))))))
@@ -96,32 +132,6 @@
 ;;
 ;; contains helper:
 ;;
-
-(defn- get! [m k]
-  (if (contains? m k)
-    (get m k)
-    (reduced false)))
-
-(defn- deep-compare [actual expected]
-  (reduce-kv (fn [_ expected-k expected-v]
-               (let [actual-v (get! actual expected-k)]
-                 (or (cond
-                       ; they are equal?
-                       (= expected-v actual-v)
-                       true
-                       ; both are maps, go deeper:
-                       (and (map? expected-v)
-                            (map? actual-v))
-                       (deep-compare actual-v expected-v)
-                       ; expected is fn?
-                       (or (symbol? expected-v)
-                           (fn? expected-v))
-                       (expected-v actual-v)
-                       ; none of the above, fail:
-                       :else false)
-                     (reduced false))))
-             false
-             expected))
 
 (defn contains [expected]
   {:pre [(map? expected)]}
