@@ -64,9 +64,9 @@
 
 (declare =not=>)
 (defmethod assert-expr '=not=> [msg [_ & body]]
-  (assert-expr msg (cons `not (list (if (expected-fn? body)
-                                      body
-                                      (cons `= body))))))
+  (assert-expr msg (if (expected-fn? body)
+                     (cons (list `complement `invoke) body)
+                     (cons `not= body))))
 
 (defn cause-seq [^Throwable exception]
   (if exception
