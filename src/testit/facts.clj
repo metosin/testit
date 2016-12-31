@@ -24,25 +24,25 @@
        (instance? Associative v)))
 
 (defn- deep-compare [actual expected]
-  (reduce-kv (fn [_ expected-k expected-v]
-               (let [actual-v (get! actual expected-k)]
-                 (or (cond
-                       ; they are equal?
-                       (= expected-v actual-v)
-                       true
-                       ; both are map-like, go deeper:
-                       (and (map-like? expected-v)
-                            (map-like? actual-v))
-                       (deep-compare actual-v expected-v)
-                       ; expected is fn?
-                       (or (symbol? expected-v)
-                           (fn? expected-v))
-                       (expected-v actual-v)
-                       ; none of the above, fail:
-                       :else false)
-                     (reduced false))))
-             false
-             expected))
+  (reduce (fn [_ [expected-k expected-v]]
+            (let [actual-v (get! actual expected-k)]
+              (or (cond
+                    ; they are equal?
+                    (= expected-v actual-v)
+                    true
+                    ; both are map-like, go deeper:
+                    (and (map-like? expected-v)
+                         (map-like? actual-v))
+                    (deep-compare actual-v expected-v)
+                    ; expected is fn?
+                    (or (symbol? expected-v)
+                        (fn? expected-v))
+                    (expected-v actual-v)
+                    ; none of the above, fail:
+                    :else false)
+                  (reduced false))))
+          false
+          expected))
 
 ;;
 ;; fact and facts macros:
@@ -79,28 +79,44 @@
 ;; Extending clojure.test for =>, =not=> and =throw=>
 ;;
 
-(def ^:private sym-fn-or-seq? (some-fn symbol? fn? seq?))
-
-(defn- expected-fn? [body]
-  (and (-> body seq?)
-       (-> body first sym-fn-or-seq?)))
-
-(defn invoke [f & args]
-  (if (fn? f)
-    (apply f args)
-    (= f (first args))))
+(defn match-expectation? [expected actual]
+  (if (fn? expected)
+    (expected actual)
+    (= expected actual)))
 
 (declare =>)
-(defmethod assert-expr '=> [msg [_ & body]]
-  (assert-expr msg (if (expected-fn? body)
-                     (cons `invoke body)
-                     (cons `= body))))
+(defmethod assert-expr '=> [msg [_ expected actual]]
+  (assert-expr msg (list `match-expectation? expected actual)))
 
 (declare =not=>)
-(defmethod assert-expr '=not=> [msg [_ & body]]
-  (assert-expr msg (if (expected-fn? body)
-                     (cons (list `complement `invoke) body)
-                     (cons `not= body))))
+(defmethod assert-expr '=not=> [msg [_ expected actual]]
+  (assert-expr msg (list (list `complement `match-expectation?) expected actual)))
+
+(def ^:dynamic *eventually-polling-ms* 50)
+(def ^:dynamic *eventually-timeout-ms* 1000)
+
+(defn eventually [expected actual]
+  (let [polling *eventually-polling-ms*
+        deadline (+ (System/currentTimeMillis) *eventually-timeout-ms*)]
+    (loop []
+      (let [v (actual)
+            r (expected v)]
+        (cond
+          r r
+          (< (System/currentTimeMillis) deadline) (do (Thread/sleep polling)
+                                                      (recur))
+          :else false)))))
+
+(declare =eventually=>)
+(defmethod assert-expr '=eventually=> [msg [_ expected actually]]
+  (assert-expr msg `(eventually
+                      (let [e# ~expected]
+                        (cond
+                          (fn? e#) e#
+                          ; TODO: add special support for futures, promises, derefs
+                          :else (partial = e#)))
+                      (fn [] ~actually))))
+
 
 (defn cause-seq [^Throwable exception]
   (if exception
@@ -134,7 +150,7 @@
 ;;
 
 (defn contains [expected]
-  {:pre [(map? expected)]}
+  {:pre [(map-like? expected)]}
   (fn [actual]
     (deep-compare actual expected)))
 

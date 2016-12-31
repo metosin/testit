@@ -292,6 +292,8 @@ In the example above, the first fact passes but the second fails after 1 sec.
 - [ ] Detect and complain about common mistakes like using multile `=>` forms with `fact`
 - [ ] Provide better error messages when right side is a predicate
 - [ ] Devise way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
+- [ ] Implement `=eventually=>` for async tests
+- [ ] Add support to comparing seq's and lists
 
 ## License
 
