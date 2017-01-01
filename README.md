@@ -188,6 +188,39 @@ implemented like this:
 Other helper predicates are `testit.facts/truthy` and `testit.facts/falsey` which test given
 values for clojure 'truthines' and 'falsines' respectively.
 
+## The `=eventually=>` arrow
+
+You can use the `=eventually=>` arrow to test async code.
+
+```clj
+(let [a (atom -1)]
+  (future
+    (Thread/sleep 100)
+    (reset! a 1))
+  (fact
+    (deref a) =eventually=> pos?))
+```
+
+On the code above, the result of evaluating the `(deref a)` is initially -1. The test does not
+the expected predicate `pos?`. How ever, the `=eventually=>` will keep repeating the test until
+the test matches, or a timeout occurs. Eventually the future resets the atom to 1 and the test
+passes.
+
+By default the `=eventually=>` keeps evaluating and testing every 50 ms and the timeout is 1 sec.
+You can change these by binding `testit.facts/*eventually-polling-ms*` and 
+`testit.facts/*eventually-timeout-ms*`. For example, code below sets the timeout to 2 sec.
+
+```clj
+(testing "You can change the timeout from it's default of 1sec"
+  (binding [*eventually-timeout-ms* 2000]
+    (let [a (atom -1)]
+      (future
+        (Thread/sleep 1500)
+        (reset! a 1))
+      (fact
+        (deref a) =eventually=> pos?))))
+```
+
 ## `contains`
 
 Very often you want to test that the left side evaluates to a map with
@@ -292,7 +325,7 @@ In the example above, the first fact passes but the second fails after 1 sec.
 - [ ] Detect and complain about common mistakes like using multile `=>` forms with `fact`
 - [ ] Provide better error messages when right side is a predicate
 - [ ] Devise way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
-- [ ] Implement `=eventually=>` for async tests
+- [x] Implement `=eventually=>` for async tests
 - [ ] Add support to comparing seq's and lists
 
 ## License
