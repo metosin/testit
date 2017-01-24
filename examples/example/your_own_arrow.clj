@@ -1,6 +1,6 @@
 (ns example.your-own-arrow
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
 (declare =quickly=>)
 (defmethod assert-expr '=quickly=> [msg [_ & body]]

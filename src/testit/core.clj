@@ -1,4 +1,4 @@
-(ns testit.facts
+(ns testit.core
   (:require [clojure.test :refer :all])
   (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
 

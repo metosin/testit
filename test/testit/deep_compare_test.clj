@@ -1,9 +1,9 @@
 (ns testit.deep-compare-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
-(def deep-compare #'testit.facts/deep-compare)
+(def deep-compare #'testit.core/deep-compare)
 
 (deftest basics-tests
   (facts

@@ -1,6 +1,6 @@
 (ns example.eventually-arrow-example
   (require [clojure.test :refer :all]
-           [testit.facts :refer :all]))
+           [testit.core :refer :all]))
 
 (deftest eventually-example
 

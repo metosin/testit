@@ -1,7 +1,7 @@
 (ns testit.eventually-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
 (deftest eventually-test
   (fact "immediatelly pass"
