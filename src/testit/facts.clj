@@ -1,6 +1,6 @@
 (ns testit.facts
   (:require [clojure.test :refer :all])
-  (:import (clojure.lang IExceptionInfo ILookup Associative)))
+  (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
 
 ;;
 ;; Common predicates:
@@ -14,35 +14,39 @@
 ;; Utils:
 ;;
 
-(defn- get! [m k]
-  (if (contains? m k)
-    (get m k)
-    (reduced false)))
-
 (defn- map-like? [v]
   (and (instance? ILookup v)
        (instance? Associative v)))
 
+(defn- seqable? [v]
+  (instance? Seqable v))
+
 (defn- deep-compare [actual expected]
-  (reduce (fn [_ [expected-k expected-v]]
-            (let [actual-v (get! actual expected-k)]
-              (or (cond
-                    ; they are equal?
-                    (= expected-v actual-v)
+  (cond
+    ; they are equal?
+    (= actual expected)
+    true
+    ; expected is fn?
+    (or (symbol? expected)
+        (fn? expected))
+    (expected actual)
+    ; both are map(like):
+    (and (map-like? actual)
+         (map-like? expected))
+    (and (= (keys actual) (keys expected))
+         (reduce-kv (fn [match? k expected-v]
+                      (and match?
+                           (contains? actual k)
+                           (deep-compare (get actual k) expected-v)))
                     true
-                    ; both are map-like, go deeper:
-                    (and (map-like? expected-v)
-                         (map-like? actual-v))
-                    (deep-compare actual-v expected-v)
-                    ; expected is fn?
-                    (or (symbol? expected-v)
-                        (fn? expected-v))
-                    (expected-v actual-v)
-                    ; none of the above, fail:
-                    :else false)
-                  (reduced false))))
-          false
-          expected))
+                    expected))
+    ; both are sequable:
+    (and (seqable? actual)
+         (seqable? expected))
+    (->> (map deep-compare actual expected)
+         (every? truthy))
+    ; none of the above, fail:
+    :else false))
 
 ;;
 ;; fact and facts macros:
@@ -133,9 +137,8 @@
     (fn? expected) (expected exception)
     (map? expected) (and (instance? IExceptionInfo exception)
                          (deep-compare (.getData ^IExceptionInfo exception) expected))
-    (seq expected) (->> (map vector expected (cause-seq exception))
-                        (every? (fn [[exp exc]]
-                                  (exception-match? exp exc))))))
+    (seq expected) (->> (map exception-match? expected (cause-seq exception))
+                        (every? truthy))))
 
 (declare =throws=>)
 (defmethod assert-expr '=throws=> [msg [_ e & body]]
@@ -149,10 +152,47 @@
 ;; contains helper:
 ;;
 
+(def ... ::and-then-some)
+
 (defn contains [expected]
-  {:pre [(map-like? expected)]}
-  (fn [actual]
-    (deep-compare actual expected)))
+  (cond
+    (map? expected)
+    (fn [actual]
+      (and (map-like? actual)
+           (reduce-kv (fn [match? k expected-v]
+                        (and match?
+                             (contains? actual k)
+                             (deep-compare (get actual k) (contains expected-v))))
+                      true
+                      expected)))
+
+    (set? expected)
+    (fn [actual]
+      (and (<= (count expected) (count actual))
+           (reduce (fn [match? expected-v]
+                     (and match? (true? (some (contains expected-v) actual))))
+                   true
+                   expected)))
+
+    (vector? expected)
+    (fn [actual]
+      (and (or (and (= (last expected) ...)
+                    (<= (dec (count expected)) (count actual)))
+               (= (count actual) (count expected)))
+           (reduce (fn [match? [actual-v expected-v]]
+                     (if (= expected-v ...)
+                       (reduced true)
+                       (and match? (deep-compare actual-v (contains expected-v)))))
+                   true
+                   (map vector actual expected))))
+
+    (fn? expected)
+    (fn [actual]
+      (expected actual))
+
+    :else
+    (fn [actual]
+      (= actual expected))))
 
 ;;
 ;; ex-info helper:
@@ -170,7 +210,7 @@
                         (partial = message))
         data-check (if (fn? data)
                      data
-                     (contains data))]
+                     (partial = data))]
     (fn [e]
       (and (instance? IExceptionInfo e)
            (message-check (.getMessage ^Throwable e))

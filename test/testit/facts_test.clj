@@ -57,10 +57,10 @@
     (/ 1 0) =throws=> #(-> % .getMessage (str/starts-with? "Divide")))
   (let [ei (ex-info "oh no" {:reason "too lazy"})]
     (facts "Special helper for ex-info"
-      (throw ei) =throws=> (ex-info? "oh no" {:reason "too lazy"})
-      (throw ei) =throws=> (ex-info? string? {:reason "too lazy"})
+      (throw ei) =throws=> (ex-info? "oh no" (contains {:reason "too lazy"}))
+      (throw ei) =throws=> (ex-info? string? (contains {:reason "too lazy"}))
       (throw ei) =throws=> (ex-info? string? (contains {:reason string?}))
-      (throw ei) =throws=> (ex-info? any {:reason "too lazy"})
+      (throw ei) =throws=> (ex-info? any (contains {:reason "too lazy"}))
       (throw ei) =throws=> (ex-info? "oh no" any)
       (throw ei) =throws=> {:reason string?})))
 
@@ -74,13 +74,15 @@
                (Exception. "2")
                (Exception. "3")])
   (fact
+    (throw (ex-info "1" {:n 1 :a 42})) =throws=> [(ex-info? any (contains {:n 1}))])
+  (fact
     (->> (ex-info "1" {:n 1 :a 42})
          (ex-info "2" {:n 2 :a 42})
          (ex-info "3" {:n 3 :a 42})
          (throw))
-    =throws=> [(ex-info? "3" {:n 3})
+    =throws=> [(ex-info? "3" (contains {:n 3}))
                (ex-info? any any)
-               (ex-info? any {:a 42})]))
+               (ex-info? any (contains {:a 42}))]))
 
 ; deftest macro disrupts macroexpand-1 somehow, that's why these are
 ; evaluated in here:
