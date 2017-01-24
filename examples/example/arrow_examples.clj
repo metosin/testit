@@ -1,6 +1,6 @@
 (ns example.arrow-examples
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
 (deftest simple-form
   (facts

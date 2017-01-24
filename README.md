@@ -4,6 +4,8 @@
 
 Clojars dependency: `[metosin/testit "0.1.0-SNAPSHOT"]`
 
+**Note**: This library is still under heavy development!
+
 ## Goals and non-goals
 
 *Goals:*
@@ -30,12 +32,12 @@ with Midje:
   {:a 1 :z 1} => (contains {:a 1}))
 ```
 
-with `testit.facts`:
+with `testit`:
 
 ```clj
 (ns example.midje-example
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
 (deftest midje-impersonation
   (facts
@@ -172,7 +174,7 @@ caused yet another exception, this time with message `"3"`:
 
 A common pattern with Clojure code is to generate exceptions with 
 `clojure.core/ex-info`. To help testing these kind of exceptions, `testit` 
-provides a function `testit.facts/ex-info?`. The function accepts a message 
+provides a function `testit.core/ex-info?`. The function accepts a message 
 (string or a predicate) and a data (map or a predicate), and returns a predicate
 that tests given exception type (must extend `clojure.lang.IExceptionInfo`), 
 message and data.
@@ -195,13 +197,13 @@ The `any` is a predicate that matches anything. It's implemented like
 this:
 
 ```clj
-; in ns testit.facts:
+; in ns testit.core:
 (def any (constantly true))
 ```
 
 #### `truthy` and `falsey`
 
-Other helper predicate are `testit.facts/truthy` and `testit.facts/falsey` 
+Other helper predicate are `testit.core/truthy` and `testit.core/falsey` 
 which test given values for clojure 'truthines' and 'falsines' respectively.
 
 ## The `=eventually=>` arrow
@@ -225,8 +227,8 @@ passes.
 
 By default the `=eventually=>` keeps evaluating and testing every 50 ms and 
 the timeout is 1 sec. You can change these by binding 
-`testit.facts/*eventually-polling-ms*` and 
-`testit.facts/*eventually-timeout-ms*`. For example, code below sets the 
+`testit.core/*eventually-polling-ms*` and 
+`testit.core/*eventually-timeout-ms*`. For example, code below sets the 
 timeout to 2 sec.
 
 ```clj
@@ -276,7 +278,7 @@ responses. Here's an example.
 ```clj
 (ns example.contains-example
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]
+            [testit.core :refer :all]
             [clojure.string :as str]
             [clj-http.client :as http]))
 
@@ -368,7 +370,7 @@ here's a simple extension that asserts that the test is completed within 1 sec.
 ```clj
 (ns testit.your-own-arrow
   (:require [clojure.test :refer :all]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
 (declare =quickly=>)
 (defmethod assert-expr '=quickly=> [msg [_ & body]]

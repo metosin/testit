@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
             [clj-http.client :as http]
-            [testit.facts :refer :all]))
+            [testit.core :refer :all]))
 
 (deftest basics-test
   (fact
