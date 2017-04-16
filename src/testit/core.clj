@@ -1,5 +1,6 @@
 (ns testit.core
-  (:require [clojure.test :refer :all])
+  (:require [clojure.test :refer :all]
+            [testit.in :as in])
   (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
 
 ;;
@@ -95,6 +96,10 @@
 (declare =not=>)
 (defmethod assert-expr '=not=> [msg [_ expected actual]]
   (assert-expr msg (list (list `complement `match-expectation?) expected actual)))
+
+(declare =in=>)
+(defmethod assert-expr '=in=> [msg [_ expected actual]]
+  `(in/test-in ~msg ~expected ~actual))
 
 (def ^:dynamic *eventually-polling-ms* 50)
 (def ^:dynamic *eventually-timeout-ms* 1000)
