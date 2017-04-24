@@ -15,4 +15,12 @@
     (fact
       data =in=> {:a pos?})
     (fact
-      data =in=> {:a neg?})))
+      data =in=> {:a neg?})
+    (fact
+      data =in=> {:c [pos? neg? 4]})
+    (fact
+      data =in=> {:a 1
+                  :b {:c pos?}
+                  :c [odd? even? even?]
+                  :d {:e [{:f pos?} {:f pos?}]}})
+    ))

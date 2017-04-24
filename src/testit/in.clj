@@ -3,65 +3,135 @@
             [clojure.string :as str])
   (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
 
-;;
-;; Utils:
-;;
+(defn concatv [& colls]
+  (vec (apply concat colls)))
 
-(defn- seqable? [v]
-  (instance? Seqable v))
+(defn deep-compare [path expected-form expected-value actual]
+  (cond
+    ; expected is fn:
+    (fn? expected-value)
+    (let [r (expected-value actual)]
+      [{:path path
+        :type (if r :pass :fail)
+        :message (format "(%s %s) => %s" expected-form (pr-str actual) (pr-str r))
+        :expected expected-form
+        :actual actual}])
 
-(defn map-like? [v]
-  false)
-
-(defn deep-compare [path e a]
-  (let [e' (eval e)]
+    ; expected is vector:
+    (vector? expected-value)
     (cond
-      ; expected is fn:
-      (fn? e')
-      (let [r (e' a)]
-        [{:path path
-          :type (if r :pass :fail)
-          :message (format "(%s %s) => %s" (name e) (pr-str a) (pr-str r))
-          :expected e
-          :actual a}])
+      (not (sequential? actual))
+      [{:path path
+        :type :fail
+        :message "expected sequential"
+        :expected expected-form
+        :actual actual}]
 
-      ; both are sequential:
-      (and (sequential? e') (sequential? a))
-      (mapcat deep-compare
-              (map (partial conj path) (range))
-              e
-              a)
+      (-> expected-value meta :in-any-order)
+      (reduce (fn [acc [path expected-form expected-value]]
+                (concatv acc (if-let [matched-value (some (fn [actual-value]
+                                                            (if (->> (deep-compare nil expected-form expected-value actual-value)
+                                                                     (every? (comp (partial = :pass) :type)))
+                                                              actual-value))
+                                                          actual)]
+                               [{:path path
+                                 :type :pass
+                                 :message (str matched-value " matches " expected-form)
+                                 :expected expected-form
+                                 :actual matched-value}]
+                               [{:path path
+                                 :type :fail
+                                 :message (str "nothing matches " expected-form)
+                                 :expected expected-form
+                                 :actual nil}])))
+              []
+              (map vector
+                   (map (partial conj path) (range))
+                   expected-form
+                   expected-value))
 
-      ; both are map(like):
-      (and (associative? a) (associative? e'))
-      (reduce-kv (fn [acc k v]
-                   (let [path' (conj path k)]
-                     (concat acc (if (contains? a k)
-                                   (deep-compare path' v (get a k))
-                                   [{:path path'
-                                     :type :fail
-                                     :message (format "actual is missing key %s" k)
-                                     :expected v
-                                     :actual nil}]))))
-                 []
-                 e)
-
-      ; none of the above, use =:
       :else
-      (let [r (= e' a)]
-        [{:path path
-          :type (if r :pass :fail)
-          :message (format "(= %s %s) => %s" (pr-str e') (pr-str a) (pr-str r))
-          :expected e
-          :actual a}]))))
+      (reduce (fn [acc [path expected-form expected-value actual]]
+                (cond
+                  ; expected is ..., that means we're done:
+                  (= expected-value :testit.core/and-then-some)
+                  (reduced acc)
 
+                  ; both ended at the same time:
+                  (= expected-value actual ::eof)
+                  (reduced acc)
+
+                  ; expected shorter than actual:
+                  (and (= expected-value ::eof)
+                       (not= actual ::eof))
+                  (reduced (conj acc {:path path
+                                      :type :fail
+                                      :message (format "did not expect more than %d elements" (last path))
+                                      :expected nil
+                                      :actual actual}))
+
+                  ; expected longer than actual:
+                  (and (not= expected-value ::eof)
+                       (= actual ::eof))
+                  (reduced (conj acc {:path path
+                                      :type :fail
+                                      :message (format "expected more than %d elements" (last path))
+                                      :expected expected-form
+                                      :actual nil}))
+
+                  ; regular deep compare:
+                  :else
+                  (concatv acc (deep-compare path expected-form expected-value actual))))
+              []
+              (map vector
+                   (map (partial conj path) (range))
+                   (concat expected-form [::eof])
+                   (concat expected-value [::eof])
+                   (concat actual [::eof]))))
+
+    ; expected is map(like):
+    (associative? expected-value)
+    (if (not (associative? actual))
+      [{:path path
+        :type :fail
+        :message "expected associative"
+        :expected expected-form
+        :actual actual}]
+      (reduce (fn [acc k]
+                (let [path' (conj path k)]
+                  (concatv acc (if (contains? actual k)
+                                 (deep-compare path'
+                                               (get expected-form k)
+                                               (get expected-value k)
+                                               (get actual k))
+                                 [{:path path'
+                                   :type :fail
+                                   :message (format "actual is missing key %s" k)
+                                   :expected (get expected-form k)
+                                   :actual nil}]))))
+              []
+              (keys expected-value)))
+
+    ; none of the above, use plain =
+    :else
+    (let [r (= expected-value actual)]
+      [{:path path
+        :type (if r :pass :fail)
+        :message (format "(= %s %s) => %s"
+                         (pr-str expected-form)
+                         (pr-str actual)
+                         (pr-str r))
+        :expected expected-form
+        :actual actual}])))
 
 (defn explain-errors [result]
   (->> result
        (remove (comp (partial = :pass) :type))
        (map (fn [{:keys [path message expected actual]}]
-              (format "at %s \"%s\"\n  expected: %s\n  actual: %s"
-                      (pr-str path)
+              (format "%s\"%s\"\n-  expected: %s\n-  actual: %s"
+                      (if (seq path)
+                        (str "in " (pr-str path) " ")
+                        "")
                       message
                       (pr-str expected)
                       (pr-str actual))))
@@ -81,30 +151,13 @@
 
 (defmacro test-in [msg expected actual]
   `(try
-     (let [e# (quote ~expected)
-           a# ~actual]
-       (->> (deep-compare [] e# a#)
-            (generate-report ~msg e# a#)
-            (do-report)))
+     (let [expected-form# (quote ~expected)
+           expected-value# ~expected
+           actual-value# ~actual]
+       (->> (deep-compare [] expected-form# expected-value# actual-value#)
+            (generate-report ~msg expected-form# actual-value#)))
      (catch Throwable t#
-       (do-report {:type :error
-                   :message ~msg
-                   :expected ~expected
-                   :actual t#}))))
-
-(-> (test-in "some fancy test"
-             [1 [pos? neg?] 3 {:a 1 :b pos? :c 3}]
-             [1 [2 -2] 13 {:a 1 :b -1}])
-    :message
-    println)
-
-(test-in "some message"
-         1 2)
-
-(test-in "some message"
-         {:a pos?
-          :b [string? "bozz" zero?]
-          :c 42}
-         {:a 42
-          :b ["foo" "boz" (- 2 2 1)]
-          :c 41})
+       {:type :error
+        :message ~msg
+        :expected ~expected
+        :actual t#})))

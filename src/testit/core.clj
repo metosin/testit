@@ -99,7 +99,7 @@
 
 (declare =in=>)
 (defmethod assert-expr '=in=> [msg [_ expected actual]]
-  `(in/test-in ~msg ~expected ~actual))
+  `(do-report (in/test-in ~msg ~expected ~actual)))
 
 (def ^:dynamic *eventually-polling-ms* 50)
 (def ^:dynamic *eventually-timeout-ms* 1000)
