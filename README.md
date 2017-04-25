@@ -2,7 +2,7 @@
 
 [Midje](https://github.com/marick/Midje) style assertions for `clojure.test`
 
-Clojars dependency: `[metosin/testit "0.1.0-SNAPSHOT"]`
+Clojars dependency: `[metosin/testit "0.0.1"]`
 
 **Note**: This library is still under heavy development!
 
