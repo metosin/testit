@@ -1,7 +1,6 @@
 (ns testit.in
   (:require [clojure.test :refer :all]
-            [clojure.string :as str])
-  (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
+            [clojure.string :as str]))
 
 (defn deep-compare [path expected-form expected-value actual]
   (cond
