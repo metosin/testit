@@ -36,7 +36,7 @@
                                                           actual)]
                                [{:path path
                                  :type :pass
-                                 :message (str matched-value " matches " expected-form)
+                                 :message (str (pr-str matched-value) " matches " expected-form)
                                  :expected expected-form
                                  :actual matched-value}]
                                [{:path path
