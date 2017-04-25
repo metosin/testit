@@ -3,9 +3,6 @@
             [clojure.string :as str])
   (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
 
-(defn- concatv [& colls]
-  (vec (apply concat colls)))
-
 (defn deep-compare [path expected-form expected-value actual]
   (cond
     ; expected is fn:
@@ -29,21 +26,21 @@
 
       (-> expected-value meta :in-any-order)
       (reduce (fn [acc [path expected-form expected-value]]
-                (concatv acc (if-let [matched-value (some (fn [actual-value]
-                                                            (if (->> (deep-compare nil expected-form expected-value actual-value)
-                                                                     (every? (comp (partial = :pass) :type)))
-                                                              actual-value))
-                                                          actual)]
-                               [{:path path
-                                 :type :pass
-                                 :message (str (pr-str matched-value) " matches " expected-form)
-                                 :expected expected-form
-                                 :actual matched-value}]
-                               [{:path path
-                                 :type :fail
-                                 :message (str "nothing matches " expected-form)
-                                 :expected expected-form
-                                 :actual nil}])))
+                (conj acc (if-let [matched-value (some (fn [actual-value]
+                                                         (if (->> (deep-compare nil expected-form expected-value actual-value)
+                                                                  (every? (comp (partial = :pass) :type)))
+                                                           actual-value))
+                                                       actual)]
+                            {:path path
+                             :type :pass
+                             :message (str (pr-str matched-value) " matches " expected-form)
+                             :expected expected-form
+                             :actual matched-value}
+                            {:path path
+                             :type :fail
+                             :message (str "nothing matches " expected-form)
+                             :expected expected-form
+                             :actual nil})))
               []
               (map vector
                    (map (partial conj path) (range))
@@ -81,7 +78,7 @@
 
                   ; regular deep compare:
                   :else
-                  (concatv acc (deep-compare path expected-form expected-value actual))))
+                  (into acc (deep-compare path expected-form expected-value actual))))
               []
               (map vector
                    (map (partial conj path) (range))
@@ -99,16 +96,16 @@
         :actual actual}]
       (reduce (fn [acc k]
                 (let [path' (conj path k)]
-                  (concatv acc (if (contains? actual k)
-                                 (deep-compare path'
-                                               (get expected-form k)
-                                               (get expected-value k)
-                                               (get actual k))
-                                 [{:path path'
-                                   :type :fail
-                                   :message (format "actual is missing key %s" k)
-                                   :expected (get expected-form k)
-                                   :actual nil}]))))
+                  (into acc (if (contains? actual k)
+                              (deep-compare path'
+                                            (get expected-form k)
+                                            (get expected-value k)
+                                            (get actual k))
+                              [{:path path'
+                                :type :fail
+                                :message (format "actual is missing key %s" k)
+                                :expected (get expected-form k)
+                                :actual nil}]))))
               []
               (keys expected-value)))
 
