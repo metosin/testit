@@ -1,4 +1,4 @@
-# testit
+# testit [![Build Status](https://api.travis-ci.org/metosin/testit.svg?branch=master)](https://travis-ci.org/metosin/testit)
 
 [Midje](https://github.com/marick/Midje) style assertions for `clojure.test`
 
