@@ -152,6 +152,17 @@
 ;; contains helper:
 ;;
 
+(declare contains)
+
+(defmulti vector-checker (fn [key _ _] key) :default ::default)
+
+(defmethod vector-checker ::default [_ _ _] nil)
+(defmethod vector-checker ::and-then-some [_ actual expected]
+  (reduce (fn [match? [actual-v expected-v]]
+            (and match? (deep-compare actual-v (contains expected-v))))
+          true
+          (map vector actual expected)))
+
 (def ... ::and-then-some)
 
 (defn contains [expected]
@@ -176,15 +187,15 @@
 
     (vector? expected)
     (fn [actual]
-      (and (or (and (= (last expected) ...)
-                    (<= (dec (count expected)) (count actual)))
-               (= (count actual) (count expected)))
-           (reduce (fn [match? [actual-v expected-v]]
-                     (if (= expected-v ...)
-                       (reduced true)
-                       (and match? (deep-compare actual-v (contains expected-v)))))
-                   true
-                   (map vector actual expected))))
+      (let [maybe-checked (vector-checker (last expected) actual (butlast expected))]
+        (if maybe-checked
+          (or (<= (dec (count expected)) (count actual))
+              maybe-checked)
+          (and (= (count actual) (count expected))
+               (reduce (fn [match? [actual-v expected-v]]
+                         (and match? (deep-compare actual-v (contains expected-v))))
+                       true
+                       (map vector actual expected))))))
 
     (fn? expected)
     (fn [actual]

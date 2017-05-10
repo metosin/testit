@@ -38,6 +38,7 @@
   (is (false? ((contains [1 2 3]) [3 2 1])))
   (is (false? ((contains [1 2 3]) [1 2])))
   (is (false? ((contains [1 2 3]) [1 2 3 4])))
+  (is (false? ((contains [1 ... 2]) [1 2])))
   (is (true? ((contains [1 2 ...]) [1 2])))
   (is (true? ((contains [1 2 ...]) [1 2 3])))
   (is (true? ((contains [1 2 ...]) [1 2 3 4])))
