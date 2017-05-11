@@ -314,10 +314,10 @@ The matching is recursive, so this works too:
 
 #### ...and there can be more
 
-The last value in a expectation vector can be a special qualified
-keyword, which is used to lookup a actual vector checker using the
-`testit.core/vector-checker` multimethod. Testit ships with
-`testit.core/and-then-some` value (and a `...` shortcut symbol for it)
+The last value in a expectation vector can be a qualified dispatch key
+to select an actual contains login via `testit.core/vector-contains`
+multimethod. Testit ships with a dispatch key
+`testit.core/and-then-some` (and a `...` shortcut symbol for it)
 that allows any extra values in the end.
 
 For example, these tests all pass:

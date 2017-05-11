@@ -41,6 +41,7 @@
   (is (false? ((contains [1 ... 2]) [1 2])))
   (is (false? ((contains [1 ... 2 ...]) [1 2])))
   (is (true? ((contains [1 2 ...]) [1 2])))
+  (is (false? ((contains [1 2 3 ...]) [1 2])))
   (is (true? ((contains [1 2 ...]) [1 2 3])))
   (is (true? ((contains [1 2 ...]) [1 2 3 4])))
   (is (true? ((contains {:foo [1 2 3]}) {:foo [1 2 3]})))
@@ -50,6 +51,7 @@
 
 (deftest contains-set-test
   (is (true? ((contains #{1 2 3}) [1 2 3])))
+  (is (false? ((contains #{1 2 3}) [1 2])))
   (is (true? ((contains #{1 2 3}) [1 2 3 4 5])))
   (is (false? ((contains #{0 1 2 3}) [1 2 3 4 5])))
   (is (true? ((contains #{pos? neg? zero?}) [1 -1 0])))

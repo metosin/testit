@@ -154,14 +154,13 @@
 
 (declare contains)
 
-(defmulti vector-checker (fn [key _ _] key) :default ::default)
-
-(defmethod vector-checker ::default [_ _ _] nil)
-(defmethod vector-checker ::and-then-some [_ actual expected]
-  (reduce (fn [match? [actual-v expected-v]]
-            (and match? (deep-compare actual-v (contains expected-v))))
-          true
-          (map vector actual expected)))
+(defmulti vector-contains (fn [key _ _] key) :default ::default)
+(defmethod vector-contains ::and-then-some [_ actual expected]
+  (reduce
+    (fn [match? [actual-v expected-v]]
+      (and match? (deep-compare actual-v (contains expected-v))))
+    true
+    (map vector (concat actual (repeat ::invalid)) expected)))
 
 (def ... ::and-then-some)
 
@@ -187,10 +186,10 @@
 
     (vector? expected)
     (fn [actual]
-      (let [maybe-checked (vector-checker (last expected) actual (butlast expected))]
-        (if maybe-checked
+      (let [dispatch-key (last expected)]
+        (if (-> vector-contains methods (contains? dispatch-key))
           (or (<= (dec (count expected)) (count actual))
-              maybe-checked)
+              (vector-contains dispatch-key actual (butlast expected)))
           (and (= (count actual) (count expected))
                (reduce (fn [match? [actual-v expected-v]]
                          (and match? (deep-compare actual-v (contains expected-v))))
