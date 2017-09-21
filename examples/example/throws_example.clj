@@ -25,4 +25,13 @@
       (throw e) =throws=> (ex-info? string? {:reason string?})
       (throw e) =throws=> (ex-info? any {:reason "too lazy"})
       (throw e) =throws=> (ex-info? "oh no" any)
-      (throw e) =throws=> (ex-info? any any))))
+      (throw e) =throws=> (ex-info? any any)))
+
+  (fact
+    (->> (java.lang.ArithmeticException. "3")
+         (java.lang.RuntimeException. "2")
+         (java.util.concurrent.ExecutionException. "1")
+         (throw))
+    =throws=> [(Exception. "1")
+               (Exception. "2")
+               (Exception. "3")]))
