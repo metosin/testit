@@ -89,3 +89,8 @@
                                    :zip (fn [v] (re-matches #"\d+" v))}}
                   :headers {"Content-Type" "application/edn"
                             "E-Tag" "112233"}})))
+
+#_
+(deftest readme-test
+  (fact
+    [0 1 2 3] =in=> [0 1 42 3]))
