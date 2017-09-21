@@ -278,7 +278,7 @@ A very common use-case for this kind of testing is testing the HTTP
 responses. Here's an example.
 
 ```clj
-(ns example.contains-example
+(ns example.http-example
   (:require [clojure.test :refer :all]
             [testit.core :refer :all]
             [clojure.string :as str]
