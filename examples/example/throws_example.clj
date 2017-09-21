@@ -28,7 +28,7 @@
     (facts
       (throw e) =throws=> (ex-info? "oh no" {:reason "too lazy"})
       (throw e) =throws=> (ex-info? string? {:reason "too lazy"})
-      (throw e) =throws=> (ex-info? string? (contains {:reason string?}))
+      (throw e) =throws=> (ex-info? string? {:reason string?})
       (throw e) =throws=> (ex-info? any {:reason "too lazy"})
       (throw e) =throws=> (ex-info? "oh no" any)
       (throw e) =throws=> (ex-info? any any))))

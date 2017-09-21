@@ -1,7 +1,7 @@
 (ns testit.core
   (:require [clojure.test :refer :all]
             [testit.in :as in])
-  (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
+  (:import (clojure.lang IExceptionInfo)))
 
 ;;
 ;; Common predicates:
@@ -10,44 +10,6 @@
 (def any (constantly true))
 (defn truthy [v] (if v true false))
 (defn falsey [v] (if-not v true false))
-
-;;
-;; Utils:
-;;
-
-(defn- map-like? [v]
-  (and (instance? ILookup v)
-       (instance? Associative v)))
-
-(defn- seqable? [v]
-  (instance? Seqable v))
-
-(defn- deep-compare [actual expected]
-  (cond
-    ; they are equal?
-    (= actual expected)
-    true
-    ; expected is fn?
-    (or (symbol? expected)
-        (fn? expected))
-    (expected actual)
-    ; both are map(like):
-    (and (map-like? actual)
-         (map-like? expected))
-    (and (= (keys actual) (keys expected))
-         (reduce-kv (fn [match? k expected-v]
-                      (and match?
-                           (contains? actual k)
-                           (deep-compare (get actual k) expected-v)))
-                    true
-                    expected))
-    ; both are sequable:
-    (and (seqable? actual)
-         (seqable? expected))
-    (->> (map deep-compare actual expected)
-         (every? truthy))
-    ; none of the above, fail:
-    :else false))
 
 ;;
 ;; fact and facts macros:
@@ -141,7 +103,11 @@
                                            (.getMessage exception)))
     (fn? expected) (expected exception)
     (map? expected) (and (instance? IExceptionInfo exception)
-                         (deep-compare (.getData ^IExceptionInfo exception) expected))
+                         (in/deep-compare
+                           nil
+                           expected
+                           expected
+                           (.getData ^IExceptionInfo exception)))
     (seq expected) (->> (map exception-match? expected (cause-seq exception))
                         (every? truthy))))
 
@@ -154,50 +120,10 @@
                         (exception-match? ~e ex#)))))
 
 ;;
-;; contains helper:
+;; Used in =in=> with sequentials:
 ;;
 
 (def ... ::and-then-some)
-
-(defn contains [expected]
-  (cond
-    (map? expected)
-    (fn [actual]
-      (and (map-like? actual)
-           (reduce-kv (fn [match? k expected-v]
-                        (and match?
-                             (contains? actual k)
-                             (deep-compare (get actual k) (contains expected-v))))
-                      true
-                      expected)))
-
-    (set? expected)
-    (fn [actual]
-      (and (<= (count expected) (count actual))
-           (reduce (fn [match? expected-v]
-                     (and match? (true? (some (contains expected-v) actual))))
-                   true
-                   expected)))
-
-    (vector? expected)
-    (fn [actual]
-      (and (or (and (= (last expected) ...)
-                    (<= (dec (count expected)) (count actual)))
-               (= (count actual) (count expected)))
-           (reduce (fn [match? [actual-v expected-v]]
-                     (if (= expected-v ...)
-                       (reduced true)
-                       (and match? (deep-compare actual-v (contains expected-v)))))
-                   true
-                   (map vector actual expected))))
-
-    (fn? expected)
-    (fn [actual]
-      (expected actual))
-
-    :else
-    (fn [actual]
-      (= actual expected))))
 
 ;;
 ;; ex-info helper:
