@@ -108,6 +108,15 @@
               []
               (keys expected-value)))
 
+    ; expected is a regexp:
+    (instance? java.util.regex.Pattern expected-value)
+    (let [match? (re-find expected-value actual)]
+      [{:path path
+        :type (if match? :pass :fail)
+        :message (format "(re-find %s %s) => truthy" (pr-str expected-form) (pr-str actual))
+        :expected expected-form
+        :actual actual}])
+
     ; none of the above, use plain =
     :else
     (let [r (= expected-value actual)]

@@ -151,3 +151,11 @@
                                                   :expected 'neg?
                                                   :actual nil
                                                   :message "nothing matches neg?"}]))
+
+(deftest regexp-support
+  (fact "match regexp"
+    "123" =in=> #"\d+")
+  (fact "match uses re-find"
+    "foo 123 bar" =in=> #"\d+")
+  (fact "but it can be bound to start end end"
+    "123" =in=> #"^\d+$"))
