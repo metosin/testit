@@ -115,7 +115,7 @@
 (defmethod assert-expr '=throws=> [msg [_ e & body]]
   (assert-expr msg `(try
                       ~@body
-                      (is false "Should throw")
+                      (is false "Expected an exception")
                       (catch Throwable ex#
                         (exception-match? ~e ex#)))))
 
