@@ -135,8 +135,8 @@
   (cond
     (class? expected) (instance? expected exception)
     (instance? Throwable expected) (and (instance? (class expected) exception)
-                                        (= (.getMessage expected)
-                                           (.getMessage exception)))
+                                        (= (.getMessage ^Throwable expected)
+                                           (.getMessage ^Throwable exception)))
     (fn? expected) (expected exception)
     (map? expected) (and (instance? IExceptionInfo exception)
                          (in/deep-compare
