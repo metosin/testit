@@ -82,7 +82,7 @@
        (do-report {:type :fail, :message ~msg, :expected expected#, :actual value#}))))
 
 (declare =in=>)
-(defmethod assert-expr '=in=> [msg [_ expected actual]]
+(defmethod assert-arrow '=in=> [{:keys [expected actual msg]}]
   `(do-report (in/test-in ~msg ~expected ~actual)))
 
 ;;
@@ -118,7 +118,7 @@
        (do-report {:type :fail, :message ~msg, :expected expected#, :actual ~actual}))))
 
 (declare =eventually-in=>)
-(defmethod assert-expr '=eventually-in=> [msg [_ expected actual]]
+(defmethod assert-arrow '=eventually-in=> [{:keys [msg expected actual]}]
   `(do-report (in/test-in-eventually ~msg ~expected ~actual ~*eventually-polling-ms* ~*eventually-timeout-ms*)))
 
 ;;
