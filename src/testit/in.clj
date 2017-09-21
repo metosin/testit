@@ -190,3 +190,28 @@
         :message ~msg
         :expected ~expected
         :actual t#})))
+
+(defn failed? [result-item]
+  (-> result-item :type (not= :pass)))
+
+(defmacro test-in-eventually [msg expected actual polling timeout]
+  `(try
+     (let [polling# ~polling
+           deadline# (+ (System/currentTimeMillis) ~timeout)
+           expected-form# (quote ~expected)
+           expected-value# ~expected
+           actual-fn# (fn [] ~actual)]
+       (loop []
+         (let [actual-value# (actual-fn#)
+               result# (deep-compare [] expected-form# expected-value# actual-value#)
+               now# (System/currentTimeMillis)]
+           (if (and (< now# deadline#)
+                    (some failed? result#))
+             (do (Thread/sleep polling#)
+                 (recur))
+             (generate-report ~msg expected-form# actual-value# result#)))))
+     (catch Throwable t#
+       {:type :error
+        :message ~msg
+        :expected ~expected
+        :actual t#})))

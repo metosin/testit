@@ -43,7 +43,7 @@
              `(fact ~result ~arrow ~expected))))))
 
 ;;
-;; Extending clojure.test for =>, =not=> and =throw=>
+;; Extending clojure.test for => and =not=>
 ;;
 
 (defn match-expectation? [expected actual]
@@ -62,6 +62,10 @@
 (declare =in=>)
 (defmethod assert-expr '=in=> [msg [_ expected actual]]
   `(do-report (in/test-in ~msg ~expected ~actual)))
+
+;;
+;; =eventually=>
+;;
 
 (def ^:dynamic *eventually-polling-ms* 50)
 (def ^:dynamic *eventually-timeout-ms* 1000)
@@ -88,6 +92,14 @@
                           :else (partial = e#)))
                       (fn [] ~actually))))
 
+
+(declare =eventually-in=>)
+(defmethod assert-expr '=eventually-in=> [msg [_ expected actual]]
+  `(do-report (in/test-in-eventually ~msg ~expected ~actual ~*eventually-polling-ms* ~*eventually-timeout-ms*)))
+
+;;
+;; =throes=>
+;;
 
 (defn cause-seq [^Throwable exception]
   (if exception
