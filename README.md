@@ -42,7 +42,7 @@ with `testit`:
 (deftest midje-impersonation
   (facts
     (+ 1 2) => 3
-    {:a 1 :z 1} => (contains {:a 1})))
+    {:a 1 :z 1} =in=> {:a 1}))
 ```
 
 ## Facts
@@ -56,8 +56,8 @@ place of test function.
 ```
 
 The `testit` extends basic `clojure.test/is` functionality
-by adding appropriate assertion logic for `=>`, `=not=>` and `=throws=>` 
-symbols.
+by adding appropriate assertion logic for `=>`, `=not=>`, `=in=>`, 
+and `=throws=>` symbols.
 
 The `facts` allows grouping of multiple assertions into a single form. For 
 example:
@@ -242,10 +242,9 @@ timeout to 2 sec.
         (deref a) =eventually=> pos?))))
 ```
 
-## `contains`
+## `=in=>`
 
-The `contains` returns a predicate that matches expectations with more relaxed 
-manner. For example:
+The `=in=>` is for more relaxed equality tests, like `contains` in Midje. For example:
 
 ```clj
 (fact
@@ -254,29 +253,32 @@ manner. For example:
 
 ```clj
 (fact
-  {:a 1 :b 2} => (contains {:a 1}))  ;=> Ok
+  {:a 1 :b 2} =in=> {:a 1})  ;=> Ok
 ```
+
+This ensures that the actual (left side of `=in=>`) contains everything the expected (right
+side) contains. 
 
 ### Testing maps with `contains`
 
-When given a map, `contains` returns a predicate that checks that all given
-keys are found and they match expectations. Expected map can be deep and
-can contain predicates. For example:
+When given a map, `=in=>` checks that all given keys are found and they match 
+expectations. Expected map can be nested and can contain predicates. For example:
 
 ```clj
 (fact
   {:a 1
    :b {:c 42
        :d {:e "foo"}}} 
-  => (contains {:b {:c pos?
-                    :d {:e string?}}}))
+  =in=> 
+  {:b {:c pos?
+       :d {:e string?}}})
 ```
 
 A very common use-case for this kind of testing is testing the HTTP 
 responses. Here's an example.
 
 ```clj
-(ns example.contains-example
+(ns example.http-example
   (:require [clojure.test :refer :all]
             [testit.core :refer :all]
             [clojure.string :as str]
@@ -285,21 +287,21 @@ responses. Here's an example.
 (deftest test-google-response
   (fact
     (http/get "http://google.com")
-    => (contains {:status 200
-                  :headers {"Content-Type" #(str/starts-with? % "text/html")}
-                  :body string?})))
+    =in=> 
+    {:status 200
+     :headers {"Content-Type" #(str/starts-with? % "text/html")}
+     :body string?}))
 ```
 
-### Testing sequentials with `contains`
+### Testing sequentials with `=in=>`
 
-When given a vector, `contains` returns a predicate that checks that the
+When given a vector, `=in=>` checks that the
 expected value contains matches for each expected value, where the expected
-values can be basic values, predicates, or anything `contains` accepts. For
-example:
+values can be basic values or predicates. For example:
 
 ```clj
 (fact
-  [1 2 3] => (contains [1 pos? integer?]))
+  [1 2 3] =in=> [1 pos? integer?])
 ```
 
 The matching is recursive, so this works too:
@@ -309,7 +311,8 @@ The matching is recursive, so this works too:
   [{:a 1, :b 1}
    {:a 2, :b 2}
    {:a 3, :b 3}]
-  => (contains [{:a 1}, map?, {:b pos?}]))
+  => 
+  [{:a 1}, map?, {:b pos?}])
 ```
 
 #### ...and there can be more
@@ -320,29 +323,116 @@ pass:
 
 ```clj
 (facts
-  [1 2 3] => (contains [1 2 3 ...])
-  [1 2 3 4] => (contains [1 2 3 ...])
-  [1 2 3 4 5] => (contains [1 2 3 ...]))
+  [1 2 3] =in=> [1 2 3 ...]
+  [1 2 3 4] =in=> [1 2 3 ...]
+  [1 2 3 4 5] =in=> [1 2 3 ...])
 ```
 
 This does not pass:
 
 ```clj
 (fact
-  [1 2] => (contains [1 2 3 ...]))  ;=> FAILS
+  [1 2] =in=> [1 2 3 ...])  ;=> FAILS
 ```
 
 ### When the order is not important
 
-When `contains` is given a set, it returns a predicate that ensures that
-all elements of given set are matched by _some_ value in actual set. For
-example:
+If the expected vector has metadata `:in-any-order`, the `=in=>` checks that
+all expected elements are found in actual, but they are allowed to be in any
+order.
 
 ```clj
 (facts
-  [-1 0 +1] => (contains #{0 +1})
-  [-1 0 +1] => (contains #{pos? neg?}))
+  [-1 0 +1] =in=> ^:in-any-order [0 +1]
+  [-1 0 +1] =in=> ^:in-any-order [pos? neg?]))
 ```
+
+### Error messages with =in=>
+
+The `=in=>` tries to provide informative error messages. For example:
+
+```clj
+(fact
+  {:a {:b {:c -1}}} =in=> {:a {:b {:c pos?}}})
+```
+
+```
+FAIL in (failing-test) (in_example.clj:52)
+{:a {:b {:c -1}}} =in=> {:a {:b {:c pos?}}}:
+  in [:a :b :c]:
+  (pos? -1) => false
+    expected: pos?
+      actual: -1
+expected: {:a {:b {:c pos?}}}
+  actual: {:a {:b {:c -1}}}
+```
+
+The `in [:a :b :c]` in above error message shows the path to nested element
+that failed the test.
+
+Here's another example with sequential values:
+
+```clj
+(fact
+  [0 1 2 3] =in=> [0 1 42 3])
+```
+
+```
+FAIL in (failing-test) (in_example.clj:54)
+[0 1 2 3] =in=> [0 1 42 3]:
+  in [2]:
+  (= 42 2) => false
+    expected: 42
+      actual: 2
+expected: [0 1 42 3]
+  actual: [0 1 2 3]
+```
+
+Strings have special reporting:
+
+```clj
+(fact
+  "foodar" => "foobar")
+```
+
+```
+FAIL in (failing-test) (in_example.clj:56)
+foodar =in=> foobar:
+    (= "foobar" "foodar") => false
+    expected: "foobar"
+      actual: "foodar"
+        diff:     ^^^
+expected: "foobar"
+  actual: "foodar"
+```
+
+Here's an example with nested structures:
+
+```clj
+(fact
+  {:a {:b [0 1 2 {:c "foodar"}]}}
+  =in=>
+  {:a {:b [0 neg? 2 {:c "foobar"}]}})
+```
+
+```
+FAIL in (failing-test) (in_example.clj:58)
+{:a {:b [0 1 2 {:c "foodar"}]}} =in=> {:a {:b [0 neg? 2 {:c "foobar"}]}}:
+  in [:a :b 1]:
+  (neg? 1) => false
+    expected: neg?
+      actual: 1      
+  in [:a :b 3 :c]:
+  (= "foobar" "foodar") => false
+    expected: "foobar"
+      actual: "foodar"
+        diff:     ^^^
+expected: {:a {:b [0 neg? 2 {:c "foobar"}]}}
+  actual: {:a {:b [0 1 2 {:c "foodar"}]}}
+```
+
+Note that the above message reports two errors, first at `[:a :b 1]` and
+the second at `[:a :b 3 :c]`.
 
 ## Extend via functions
 
