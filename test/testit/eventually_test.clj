@@ -37,4 +37,3 @@
         (facts
           t => falsey
           (- end start) => (partial > 560))))))
-
