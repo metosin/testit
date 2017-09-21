@@ -2,7 +2,7 @@
   (require [clojure.test :refer :all]
            [testit.core :refer :all]))
 
-(deftest eventually-example
+(deftest ^:slow eventually-example
 
   (testing "Left-side will match right side eventually"
     (let [a (atom -1)]

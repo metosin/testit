@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [testit.core :refer :all]))
 
-(deftest eventually-test
+(deftest ^:slow eventually-test
   (fact "immediatelly pass"
     (+ 1 2) =eventually=> 3
     3 =eventually=> (+ 1 2)
