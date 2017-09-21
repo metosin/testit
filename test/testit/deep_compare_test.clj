@@ -68,3 +68,24 @@
          :message "(= 1 1) => true"
          :expected 1
          :actual 1}]))
+
+; Comment this out are run tests so you can observe the error messages
+; and IDE integration etc.
+
+#_
+(deftest failing-example
+  (let [resp {:status 200
+              :body {:name {:first "Tvler"
+                            :last "Durden"}
+                     :address {:street "537 Paper Street"
+                               :po "Bradford"
+                               :zip "19808"}}
+              :headers {"Content-Type" "application/edn"}}]
+    (fact
+      resp =in=> {:status 200
+                  :body {:name {:first "Tyler"
+                                :last "Durden"}
+                         :address {:street (fn [v] (re-find #"Paper" v))
+                                   :zip (fn [v] (re-matches #"\d+" v))}}
+                  :headers {"Content-Type" "application/edn"
+                            "E-Tag" "112233"}})))
