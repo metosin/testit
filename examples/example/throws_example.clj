@@ -18,17 +18,20 @@
     =throws=>
     (ex-info? "oh no" any))
 
-  (fact "Match ex-info exceptions with combine"
-    (throw (ex-info "oh no" {:reason "too lazy"}))
-    =throws=>
-    (ex-info? any (contains {:reason string?})))
-
-
   (let [e (ex-info "oh no" {:reason "too lazy"})]
     (facts
       (throw e) =throws=> (ex-info? "oh no" {:reason "too lazy"})
       (throw e) =throws=> (ex-info? string? {:reason "too lazy"})
-      (throw e) =throws=> (ex-info? string? (contains {:reason string?}))
+      (throw e) =throws=> (ex-info? string? {:reason string?})
       (throw e) =throws=> (ex-info? any {:reason "too lazy"})
       (throw e) =throws=> (ex-info? "oh no" any)
-      (throw e) =throws=> (ex-info? any any))))
+      (throw e) =throws=> (ex-info? any any)))
+
+  (fact
+    (->> (java.lang.ArithmeticException. "3")
+         (java.lang.RuntimeException. "2")
+         (java.util.concurrent.ExecutionException. "1")
+         (throw))
+    =throws=> [(Exception. "1")
+               (Exception. "2")
+               (Exception. "3")]))

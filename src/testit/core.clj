@@ -1,6 +1,7 @@
 (ns testit.core
-  (:require [clojure.test :refer [assert-expr testing do-report]])
-  (:import (clojure.lang IExceptionInfo ILookup Associative Seqable)))
+  (:require [clojure.test :refer [assert-expr testing do-report]]
+            [testit.in :as in])
+  (:import (clojure.lang IExceptionInfo)))
 
 ;;
 ;; Common predicates:
@@ -9,44 +10,6 @@
 (def any (constantly true))
 (defn truthy [v] (if v true false))
 (defn falsey [v] (if-not v true false))
-
-;;
-;; Utils:
-;;
-
-(defn- map-like? [v]
-  (and (instance? ILookup v)
-       (instance? Associative v)))
-
-(defn- seqable? [v]
-  (instance? Seqable v))
-
-(defn- deep-compare [actual expected]
-  (cond
-    ; they are equal?
-    (= actual expected)
-    true
-    ; expected is fn?
-    (or (symbol? expected)
-        (fn? expected))
-    (expected actual)
-    ; both are map(like):
-    (and (map-like? actual)
-         (map-like? expected))
-    (and (= (keys actual) (keys expected))
-         (reduce-kv (fn [match? k expected-v]
-                      (and match?
-                           (contains? actual k)
-                           (deep-compare (get actual k) expected-v)))
-                    true
-                    expected))
-    ; both are sequable:
-    (and (seqable? actual)
-         (seqable? expected))
-    (->> (map deep-compare actual expected)
-         (every? truthy))
-    ; none of the above, fail:
-    :else false))
 
 ;;
 ;; fact and facts macros:
@@ -91,7 +54,7 @@
              `(fact ~result ~arrow ~expected))))))
 
 ;;
-;; Extending clojure.test for =>, =not=> and =throw=>
+;; Extending clojure.test for => and =not=>
 ;;
 
 (defmacro format-expected [expected actual]
@@ -117,6 +80,14 @@
      (if-not (match-expectation? ~expected value#)
        (do-report {:type :pass, :message ~msg, :expected expected#, :actual value#})
        (do-report {:type :fail, :message ~msg, :expected expected#, :actual value#}))))
+
+(declare =in=>)
+(defmethod assert-arrow '=in=> [{:keys [expected actual msg]}]
+  `(do-report (in/test-in ~msg ~expected ~actual)))
+
+;;
+;; =eventually=>
+;;
 
 (def ^:dynamic *eventually-polling-ms* 50)
 (def ^:dynamic *eventually-timeout-ms* 1000)
@@ -146,6 +117,14 @@
        (do-report {:type :pass, :message ~msg, :expected expected#, :actual ~actual})
        (do-report {:type :fail, :message ~msg, :expected expected#, :actual ~actual}))))
 
+(declare =eventually-in=>)
+(defmethod assert-arrow '=eventually-in=> [{:keys [msg expected actual]}]
+  `(do-report (in/test-in-eventually ~msg ~expected ~actual ~*eventually-polling-ms* ~*eventually-timeout-ms*)))
+
+;;
+;; =throes=>
+;;
+
 (defn cause-seq [^Throwable exception]
   (if exception
     (lazy-seq
@@ -160,7 +139,11 @@
                                            (.getMessage exception)))
     (fn? expected) (expected exception)
     (map? expected) (and (instance? IExceptionInfo exception)
-                         (deep-compare (.getData ^IExceptionInfo exception) expected))
+                         (in/deep-compare
+                           nil
+                           expected
+                           expected
+                           (.getData ^IExceptionInfo exception)))
     (seq expected) (->> (map exception-match? expected (cause-seq exception))
                         (every? truthy))))
 
@@ -176,50 +159,10 @@
            (do-report {:type :fail, :message ~msg, :expected expected#, :actual ex#}))))))
 
 ;;
-;; contains helper:
+;; Used in =in=> with sequentials:
 ;;
 
 (def ... ::and-then-some)
-
-(defn contains [expected]
-  (cond
-    (map? expected)
-    (fn [actual]
-      (and (map-like? actual)
-           (reduce-kv (fn [match? k expected-v]
-                        (and match?
-                             (contains? actual k)
-                             (deep-compare (get actual k) (contains expected-v))))
-                      true
-                      expected)))
-
-    (set? expected)
-    (fn [actual]
-      (and (<= (count expected) (count actual))
-           (reduce (fn [match? expected-v]
-                     (and match? (true? (some (contains expected-v) actual))))
-                   true
-                   expected)))
-
-    (vector? expected)
-    (fn [actual]
-      (and (or (and (= (last expected) ...)
-                    (<= (dec (count expected)) (count actual)))
-               (= (count actual) (count expected)))
-           (reduce (fn [match? [actual-v expected-v]]
-                     (if (= expected-v ...)
-                       (reduced true)
-                       (and match? (deep-compare actual-v (contains expected-v)))))
-                   true
-                   (map vector actual expected))))
-
-    (fn? expected)
-    (fn [actual]
-      (expected actual))
-
-    :else
-    (fn [actual]
-      (= actual expected))))
 
 ;;
 ;; ex-info helper:
@@ -235,9 +178,9 @@
   (let [message-check (if (fn? message)
                         message
                         (partial = message))
-        data-check (if (fn? data)
-                     data
-                     (partial = data))]
+        data-check (fn [actual]
+                     (every? (comp (partial = :pass) :type)
+                             (in/deep-compare [] data data actual)))]
     (fn [e]
       (and (instance? IExceptionInfo e)
            (message-check (.getMessage ^Throwable e))
