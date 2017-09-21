@@ -18,12 +18,6 @@
     =throws=>
     (ex-info? "oh no" any))
 
-  (fact "Match ex-info exceptions with combine"
-    (throw (ex-info "oh no" {:reason "too lazy"}))
-    =throws=>
-    (ex-info? any (contains {:reason string?})))
-
-
   (let [e (ex-info "oh no" {:reason "too lazy"})]
     (facts
       (throw e) =throws=> (ex-info? "oh no" {:reason "too lazy"})
