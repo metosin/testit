@@ -139,11 +139,10 @@
   (let [message-check (if (fn? message)
                         message
                         (partial = message))
-        data-check (if (fn? data)
-                     data
-                     (partial = data))]
+        data-check (fn [actual]
+                     (every? (comp (partial = :pass) :type)
+                             (in/deep-compare [] data data actual)))]
     (fn [e]
       (and (instance? IExceptionInfo e)
            (message-check (.getMessage ^Throwable e))
            (data-check (.getData ^IExceptionInfo e))))))
-

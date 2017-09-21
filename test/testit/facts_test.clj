@@ -64,6 +64,14 @@
       (throw ei) =throws=> (ex-info? "oh no" any)
       (throw ei) =throws=> {:reason string?})))
 
+;; FIXME: these tests are expected to fail, figure out how to test that they really do fail
+#_(deftest test-exception-failures
+  (let [ei (ex-info "oh no" {:reason "too lazy"})]
+    (fact "Wrong message"
+      (throw ei) =throws=> (ex-info? "oh noz" {:reason "too lazy"}))
+    (fact "Data does not match"
+      (throw ei) =throws=> (ex-info? "oh no" {:reason "too lazyz"}))))
+
 (deftest test-excption-causes
   (fact
     (->> (java.lang.ArithmeticException. "3")
@@ -73,7 +81,6 @@
     =throws=> [(Exception. "1")
                (Exception. "2")
                (Exception. "3")])
-  ;; FIXME: rewrite these without contains
   (fact
     (throw (ex-info "1" {:n 1 :a 42})) =throws=> [(ex-info? any {:n 1})])
   (fact
