@@ -92,23 +92,6 @@
                (ex-info? any any)
                (ex-info? any {:a 42})]))
 
-; deftest macro disrupts macroexpand-1 somehow, that's why these are
-; evaluated in here:
-(def expanded-form-with-name (macroexpand-1 '(fact "foo is a string"
-                                               "foo" => string?)))
-(def expanded-form-without-name (macroexpand-1 '(fact
-                                                  "foo" => string?)))
-
-(deftest fact-name-is-optional-test
-  (is (= '(clojure.test/is
-            (=> string? "foo")
-            "foo is a string")
-         expanded-form-with-name))
-  (is (= '(clojure.test/is
-            (=> string? "foo")
-            "foo => string?")
-         expanded-form-without-name)))
-
 (deftest facts-for-test
   (facts-for "multiple tests againts one value"
     42

@@ -1,5 +1,5 @@
 (ns testit.core
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [assert-expr testing do-report]]
             [testit.in :as in])
   (:import (clojure.lang IExceptionInfo)))
 
@@ -21,9 +21,20 @@
     ((juxt first rest) form)
     [nil form]))
 
+(defmulti assert-arrow :arrow)
+
 (defmacro fact [& form]
-  (let [[name [value arrow expected]] (name-and-body form)]
-    `(is (~arrow ~expected ~value) ~(or name (str value " " arrow " " expected)))))
+  (let [[name [value arrow expected]] (name-and-body form)
+        msg (or name (str (pr-str value) " " arrow " " expected))]
+    `(try
+       ~(assert-arrow {:arrow arrow
+                       :msg msg
+                       :actual value
+                       :expected expected
+                       :form form})
+       (catch Throwable t#
+         (do-report {:type :error, :message ~msg,
+                     :expected '~form, :actual t#})))))
 
 (defmacro facts [& form]
   (let [[name body] (name-and-body form)]
@@ -46,18 +57,29 @@
 ;; Extending clojure.test for => and =not=>
 ;;
 
+(defmacro format-expected [expected actual]
+  `(if (fn? ~expected) '(~expected ~actual) ~expected))
+
 (defn match-expectation? [expected actual]
   (if (fn? expected)
     (expected actual)
     (= expected actual)))
 
 (declare =>)
-(defmethod assert-expr '=> [msg [_ expected actual]]
-  (assert-expr msg (list `match-expectation? expected actual)))
+(defmethod assert-arrow '=> [{:keys [expected actual msg]}]
+  `(let [value# ~actual
+         expected# (format-expected ~expected ~actual)]
+     (if (match-expectation? ~expected value#)
+       (do-report {:type :pass, :message ~msg, :expected expected#, :actual value#})
+       (do-report {:type :fail, :message ~msg, :expected expected#, :actual value#}))))
 
 (declare =not=>)
-(defmethod assert-expr '=not=> [msg [_ expected actual]]
-  (assert-expr msg (list (list `complement `match-expectation?) expected actual)))
+(defmethod assert-arrow '=not=> [{:keys [expected actual msg]}]
+  `(let [value# ~actual
+         expected# (format-expected ~expected value#)]
+     (if-not (match-expectation? ~expected value#)
+       (do-report {:type :pass, :message ~msg, :expected expected#, :actual value#})
+       (do-report {:type :fail, :message ~msg, :expected expected#, :actual value#}))))
 
 (declare =in=>)
 (defmethod assert-expr '=in=> [msg [_ expected actual]]
@@ -83,15 +105,17 @@
           :else false)))))
 
 (declare =eventually=>)
-(defmethod assert-expr '=eventually=> [msg [_ expected actually]]
-  (assert-expr msg `(eventually
-                      (let [e# ~expected]
-                        (cond
-                          (fn? e#) e#
-                          ; TODO: add special support for futures, promises, derefs
-                          :else (partial = e#)))
-                      (fn [] ~actually))))
-
+(defmethod assert-arrow '=eventually=> [{:keys [msg expected actual]}]
+  `(let [expected# (format-expected ~expected ~actual)]
+     (if (eventually
+          (let [e# ~expected]
+            (cond
+              (fn? e#) e#
+              ;; TODO: add special support for futures, promises, derefs
+              :else (partial = e#)))
+          (fn [] ~actual))
+       (do-report {:type :pass, :message ~msg, :expected expected#, :actual ~actual})
+       (do-report {:type :fail, :message ~msg, :expected expected#, :actual ~actual}))))
 
 (declare =eventually-in=>)
 (defmethod assert-expr '=eventually-in=> [msg [_ expected actual]]
@@ -124,12 +148,15 @@
                         (every? truthy))))
 
 (declare =throws=>)
-(defmethod assert-expr '=throws=> [msg [_ e & body]]
-  (assert-expr msg `(try
-                      ~@body
-                      (is false "Expected an exception")
-                      (catch Throwable ex#
-                        (exception-match? ~e ex#)))))
+(defmethod assert-arrow '=throws=> [{:keys [expected actual msg]}]
+  `(let [expected# (format-expected ~expected ~actual)]
+     (try
+       ~actual
+       (do-report {:type :fail, :message ~msg, :expected expected#, :actual nil})
+       (catch Throwable ex#
+         (if (exception-match? ~expected ex#)
+           (do-report {:type :pass, :message ~msg, :expected expected#, :actual ex#})
+           (do-report {:type :fail, :message ~msg, :expected expected#, :actual ex#}))))))
 
 ;;
 ;; Used in =in=> with sequentials:
