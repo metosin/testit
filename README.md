@@ -314,12 +314,17 @@ The matching is recursive, so this works too:
 
 #### ...and there can be more
 
-If the expectation vector ends with symbol `...`, the actual vector can
-contain more elements, they are just ignored. For example, these tests all
-pass:
+The last value in a expectation vector can be a qualified dispatch key
+to select an actual contains login via `testit.core/vector-contains`
+multimethod. Testit ships with a dispatch key
+`testit.core/and-then-some` (and a `...` shortcut symbol for it)
+that allows any extra values in the end.
+
+For example, these tests all pass:
 
 ```clj
 (facts
+  [1 2 3] => (contains [1 2 3 :testit.core/and-then-some])
   [1 2 3] => (contains [1 2 3 ...])
   [1 2 3 4] => (contains [1 2 3 ...])
   [1 2 3 4 5] => (contains [1 2 3 ...]))

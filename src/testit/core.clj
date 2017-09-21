@@ -179,6 +179,16 @@
 ;; contains helper:
 ;;
 
+(declare contains)
+
+(defmulti vector-contains (fn [key _ _] key) :default ::default)
+(defmethod vector-contains ::and-then-some [_ actual expected]
+  (reduce
+    (fn [match? [actual-v expected-v]]
+      (and match? (deep-compare actual-v (contains expected-v))))
+    true
+    (map vector (concat actual (repeat ::invalid)) expected)))
+
 (def ... ::and-then-some)
 
 (defn contains [expected]
@@ -203,15 +213,15 @@
 
     (vector? expected)
     (fn [actual]
-      (and (or (and (= (last expected) ...)
-                    (<= (dec (count expected)) (count actual)))
-               (= (count actual) (count expected)))
-           (reduce (fn [match? [actual-v expected-v]]
-                     (if (= expected-v ...)
-                       (reduced true)
-                       (and match? (deep-compare actual-v (contains expected-v)))))
-                   true
-                   (map vector actual expected))))
+      (let [dispatch-key (last expected)]
+        (if (-> vector-contains methods (contains? dispatch-key))
+          (or (<= (dec (count expected)) (count actual))
+              (vector-contains dispatch-key actual (butlast expected)))
+          (and (= (count actual) (count expected))
+               (reduce (fn [match? [actual-v expected-v]]
+                         (and match? (deep-compare actual-v (contains expected-v))))
+                       true
+                       (map vector actual expected))))))
 
     (fn? expected)
     (fn [actual]
