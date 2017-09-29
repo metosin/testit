@@ -159,3 +159,11 @@
     "foo 123 bar" =in=> #"\d+")
   (fact "but it can be bound to start end end"
     "123" =in=> #"^\d+$"))
+
+(deftest simple-in-test
+  (fact
+    "foo" =in=> "foo")
+  (fact
+    "foo" =in=> string?)
+  (fact
+    "foo" =in=> java.lang.String))

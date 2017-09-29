@@ -13,6 +13,18 @@
         :expected expected-form
         :actual actual}])
 
+    ; expected is a class
+    (class? expected-value)
+    (let [pass? (instance? expected-value actual)]
+      [{:path path
+        :type (if pass? :pass :fail)
+        :message (format "(instance? %s %s) => %s"
+                         (.getName ^Class expected-value)
+                         (pr-str actual)
+                         (pr-str pass?))
+        :expected expected-form
+        :actual actual}])
+
     ; expected is vector:
     (vector? expected-value)
     (cond
