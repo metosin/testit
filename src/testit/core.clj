@@ -94,32 +94,41 @@
 
 (defn eventually [expected actual]
   (let [polling *eventually-polling-ms*
-        deadline (+ (System/currentTimeMillis) *eventually-timeout-ms*)]
-    (loop []
-      (let [v (actual)
-            r (expected v)]
-        (cond
-          r r
-          (< (System/currentTimeMillis) deadline) (do (Thread/sleep polling)
-                                                      (recur))
-          :else false)))))
+        deadline (+ (System/currentTimeMillis) *eventually-timeout-ms*)
+        time-until-deadline (fn [] (- deadline (System/currentTimeMillis)))]
+    (loop [time-left (time-until-deadline)]
+      (let [v (try
+                (deref (actual)
+                       time-left
+                       ::timeout)
+                (catch java.util.concurrent.ExecutionException e
+                  (.getCause e)))
+            r (try
+                (expected v)
+                (catch Exception _
+                  nil))]
+        (if r
+          {:success? true, :value v}
+          (do (Thread/sleep polling)
+              (let [time-left (time-until-deadline)]
+                (if (pos? time-left)
+                  (recur time-left)
+                  {:success? false, :value v}))))))))
 
 (declare =eventually=>)
 (defmethod assert-arrow '=eventually=> [{:keys [msg expected actual]}]
-  `(let [expected# (format-expected ~expected ~actual)]
-     (if (eventually
-          (let [e# ~expected]
-            (cond
-              (fn? e#) e#
-              ;; TODO: add special support for futures, promises, derefs
-              :else (partial = e#)))
-          (fn [] ~actual))
-       (do-report {:type :pass, :message ~msg, :expected expected#, :actual ~actual})
-       (do-report {:type :fail, :message ~msg, :expected expected#, :actual ~actual}))))
+  `(let [expected# (format-expected ~expected ~actual)
+         result# (eventually
+                   (let [e# ~expected]
+                     (if (fn? e#) e# (partial = e#)))
+                   (fn [] (future ~actual)))]
+     (if (:success? result#)
+       (do-report {:type :pass, :message ~msg, :expected expected#, :actual (:value result#)})
+       (do-report {:type :fail, :message ~msg, :expected expected#, :actual (:value result#)}))))
 
 (declare =eventually-in=>)
 (defmethod assert-arrow '=eventually-in=> [{:keys [msg expected actual]}]
-  `(do-report (in/test-in-eventually ~msg ~expected ~actual ~*eventually-polling-ms* ~*eventually-timeout-ms*)))
+  `(do-report (in/test-in-eventually ~msg ~expected ~actual *eventually-polling-ms* *eventually-timeout-ms*)))
 
 ;;
 ;; =throes=>
