@@ -112,6 +112,14 @@
     (fact
       (deref a) =eventually-in=> 1))
 
+  (binding [*eventually-timeout-ms* 2000]
+    (let [a (atom nil)]
+      (future
+        (Thread/sleep 1500)
+        (reset! a 1))
+      (fact "wait for longer than the default timeout ms"
+        (deref a) =eventually-in=> 1)))
+
   (let [a (atom nil)]
     (future
       (Thread/sleep 100)
