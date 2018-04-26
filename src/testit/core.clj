@@ -119,7 +119,7 @@
 
 (declare =eventually-in=>)
 (defmethod assert-arrow '=eventually-in=> [{:keys [msg expected actual]}]
-  `(do-report (in/test-in-eventually ~msg ~expected ~actual ~*eventually-polling-ms* ~*eventually-timeout-ms*)))
+  `(do-report (in/test-in-eventually ~msg ~expected ~actual *eventually-polling-ms* *eventually-timeout-ms*)))
 
 ;;
 ;; =throes=>
