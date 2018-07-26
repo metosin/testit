@@ -23,21 +23,27 @@
       (is (= (e/accept? re re "123" [])
              [{:path []
                :type :pass
-               :message "(re-matches #\"\\d+\" \"123\") => \"123\""
+               :message "(re-find #\"\\d+\" \"123\") => \"123\""
                :expected re
                :actual "123"}]))
       (is (= (e/accept? re re "123a" [])
              [{:path []
-               :type :fail
-               :message "(re-matches #\"\\d+\" \"123a\") => nil"
+               :type :pass
+               :message "(re-find #\"\\d+\" \"123a\") => \"123\""
                :expected re
                :actual "123a"}]))
       (is (= (e/accept? re re 42 [])
              [{:path []
                :type :fail
-               :message "(re-matches #\"\\d+\" 42) => false"
+               :message "(re-find #\"\\d+\" 42) => false"
                :expected re
-               :actual 42}]))))
+               :actual 42}]))
+      (is (= (e/accept? re re "a" [])
+             [{:path []
+               :type :fail
+               :message "(re-find #\"\\d+\" \"a\") => nil"
+               :expected re
+               :actual "a"}]))))
 
   (testing "class equality"
     (is (= (e/accept? java.lang.String java.lang.String "foo" [])
@@ -113,11 +119,12 @@
 
 (deftest accept?-ex-eq-fn-test
   (let [f (fn [_]
-            [{:path [:f]
-              :type :fail
-              :message "foo"
-              :expected 'bar
-              :actual 'boz}])]
+            (e/multi-result-response
+              [{:path [:f]
+                :type :fail
+                :message "foo"
+                :expected 'bar
+                :actual 'boz}]))]
     (testing "extended equality function"
       (is (= (e/accept? f 'f true [:a :b])
              [{:path [:a :b :f]

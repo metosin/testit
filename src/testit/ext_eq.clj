@@ -1,17 +1,26 @@
 (ns testit.ext-eq
   "Extended equality")
 
+;;
+;; MultiResultResponse
+;;
+
+(defrecord MultiResultResponse [results])
+
+(defn multi-result-response? [response]
+  (instance? MultiResultResponse response))
+
+(defn multi-result-response [results]
+  (->MultiResultResponse results))
+
+;;
+;; ExtendedEquality
+;;
+
 (defprotocol ExtendedEquality
   "Protocol for extended equality"
   (accept? [expected-value expected-form actual path]
     "compare the `expected-value` to `actual` using the extended equality."))
-
-(defn multi-result-response? [response]
-  (and (->> response
-            sequential?)
-       (->> response
-            (map :type)
-            (every? #{:pass :fail :error}))))
 
 (extend-protocol ExtendedEquality
   clojure.lang.APersistentMap
@@ -104,6 +113,7 @@
           result (and (= status :response) response)]
       (if (multi-result-response? response)
         (->> response
+             :results
              (mapv #(update % :path (partial into path))))
         [{:path path
           :type (if result :pass :fail)
@@ -126,10 +136,10 @@
   java.util.regex.Pattern
   (accept? [expected-value expected-form actual path]
     (let [result (and (string? actual)
-                      (re-matches expected-value actual))]
+                      (re-find expected-value actual))]
       [{:path path
         :type (if result :pass :fail)
-        :message (format "(re-matches %s %s) => %s"
+        :message (format "(re-find %s %s) => %s"
                          (pr-str expected-form)
                          (pr-str actual)
                          (pr-str result))

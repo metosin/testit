@@ -12,7 +12,17 @@
 (declare =eventually=>)
 
 ;;
-;; Common predicates:
+;; Helpers to check for passed tests:
+;;
+
+(defn pass? [response]
+  (-> response :type (= :pass)))
+
+(defn all-pass? [responses]
+  (every? pass? responses))
+
+;;
+;; Common predicates and predicate factories:
 ;;
 
 (def any (constantly true))
@@ -23,8 +33,7 @@
 (def falsey (complement truthy))
 
 (defn just [expected-value]
-  (fn [actual]
-    (= actual expected-value)))
+  (partial = expected-value))
 
 (defn is-not [not-expected]
   (partial not= not-expected))
@@ -34,7 +43,7 @@
   ([ex-class message]
    (fn [^Throwable e]
      (concat
-       (eq/accept? ex-class ex-class (class e) [])
+       (eq/accept? ex-class ex-class e [])
        (when (and e message)
          (eq/accept? message message (.getMessage e) [:message]))))))
 
@@ -47,6 +56,26 @@
                (eq/accept? message message (.getMessage e) [:message]))
              (when (and e data)
                (eq/accept? data data (.getData e) [:data]))))))
+
+(defn in-any-order [expected-values]
+  (fn [actual-values]
+    (reduce (fn [results [n expected-value]]
+              (concat results
+                      (if-let [pass-results (some (fn [actual-value]
+                                                    (println "test:" expected-value actual-value)
+                                                    (let [results (eq/accept? expected-value expected-value actual-value [n])]
+                                                      (println "  =>" (pr-str results))
+                                                      (when (all-pass? results)
+                                                        results)))
+                                                  actual-values)]
+                        pass-results
+                        [{:type :fail
+                          :expected expected-value
+                          :actual actual-values
+                          :message "expected not found in actual values"
+                          :path [n]}])))
+            []
+            (map-indexed vector expected-values))))
 
 ;;
 ;; Used in sequentials with allowed extra elements:
@@ -63,14 +92,8 @@
    :timeout (.toMillis TimeUnit/MINUTES 1)})
 
 ;;
-;; fact and facts macros:
+;; Executing tests:
 ;;
-
-(defn pass? [response]
-  (-> response :type (= :pass)))
-
-(defn all-pass? [responses]
-  (every? pass? responses))
 
 (defn run-test [_ expected-value expected-form actual-fn]
   (let [actual (try
@@ -102,6 +125,10 @@
               (do (Thread/sleep (-> opts :polling))
                   (recur)))))))))
 
+;;
+;; Parse fact form into options, test name and arrow form:
+;;
+
 (defn opts-name-and-body [form]
   (let [[opts form] (if (and (-> form first map?)
                              (-> form second (not= '=>)))
@@ -113,17 +140,16 @@
                       [nil form])]
     [opts name form]))
 
+;;
+;; fact and facts macros:
+;;
+
+
 (defmacro fact [& form]
   (let [[opts test-name form] (opts-name-and-body form)
         [actual-form arrow expected-form] form
         async? (or (-> arrow (= '=eventually=>))
                    (-> opts :timeout))
-        error-message (str (pr-str actual-form)
-                           " "
-                           arrow
-                           " "
-                           (pr-str expected-form)
-                           " caused an unexpected exception")
         test-form `(try
                      (let [actual-fn# (fn [] ~actual-form)
                            expected-value# ~expected-form
@@ -137,7 +163,12 @@
                          (do-report report#)))
                      (catch Throwable t#
                        (do-report {:type :error
-                                   :message ~error-message
+                                   :message ~(str (pr-str actual-form)
+                                                  " "
+                                                  arrow
+                                                  " "
+                                                  (pr-str expected-form)
+                                                  " caused an unexpected exception")
                                    :expected '~expected-form
                                    :actual t#})))]
     (if test-name
@@ -145,9 +176,9 @@
       test-form)))
 
 (defmacro facts [& form]
-  (let [[opts test-name form] (opts-name-and-body form)
+  (let [[opts test-name forms] (opts-name-and-body form)
         opts (or opts {})
-        test-forms (for [fact-form (partition 3 form)]
+        test-forms (for [fact-form (partition 3 forms)]
                      (list* 'testit.core/fact opts fact-form))]
     (if test-name
       (list* 'clojure.test/testing test-name test-forms)
