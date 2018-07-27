@@ -124,7 +124,7 @@
                              (pr-str response)
                              (format "exception: %s (message=%s, data=%s)"
                                      (-> response class .getName)
-                                     (-> response .getMessage pr-str)
+                                     (-> ^Throwable response .getMessage pr-str)
                                      (if (instance? clojure.lang.ExceptionInfo response)
                                        (-> ^clojure.lang.ExceptionInfo response
                                            .getData
