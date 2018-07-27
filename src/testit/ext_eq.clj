@@ -104,6 +104,20 @@
         :expected expected-form
         :actual actual}]))
 
+  ; If we don't extend this protocol to keyword explicitly, keywords would
+  ; me matched as a function.
+  clojure.lang.Keyword
+  (accept? [expected-value expected-form actual path]
+    (let [result (= expected-value actual)]
+      [{:path path
+        :type (if result :pass :fail)
+        :message (format "(= %s %s) => %s"
+                         (pr-str expected-form)
+                         (pr-str actual)
+                         (pr-str result))
+        :expected expected-form
+        :actual actual}]))
+
   clojure.lang.IFn
   (accept? [expected-value expected-form actual path]
     (let [[status response] (try
