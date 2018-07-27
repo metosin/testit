@@ -62,9 +62,7 @@
     (reduce (fn [results [n expected-value]]
               (concat results
                       (if-let [pass-results (some (fn [actual-value]
-                                                    (println "test:" expected-value actual-value)
                                                     (let [results (eq/accept? expected-value expected-value actual-value [n])]
-                                                      (println "  =>" (pr-str results))
                                                       (when (all-pass? results)
                                                         results)))
                                                   actual-values)]
