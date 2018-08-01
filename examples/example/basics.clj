@@ -154,7 +154,8 @@
      :headers {"Content-Type" #(str/starts-with? % "text/html")}
      :body string?}))
 
-(deftest failing-test
+; Uncomment to see failing tests:
+#_(deftest failing-test
   (fact
     {:a {:b {:c -1}}}
     => {:a {:b {:c pos?}}})

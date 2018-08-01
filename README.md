@@ -375,6 +375,7 @@ expected: pos?
 - [ ] Provide better error messages
 - [ ] Figure out a way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
 - [ ] Check https://github.com/jimpil/fudje
+- [ ] Explain use of MultiResultResponse
 
 ## License
 

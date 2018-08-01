@@ -42,38 +42,41 @@
   ([ex-class] (throws ex-class nil))
   ([ex-class message]
    (fn [^Throwable e]
-     (concat
-       (eq/accept? ex-class ex-class e [])
-       (when (and e message)
-         (eq/accept? message message (.getMessage e) [:message]))))))
+     (-> (concat
+           (eq/accept? ex-class ex-class e [])
+           (when (and e message)
+             (eq/accept? message message (.getMessage e) [:message])))
+         (eq/multi-result-response)))))
 
 (defn throws-ex-info
   ([message] (throws-ex-info message nil))
   ([message data]
    (fn [^ExceptionInfo e]
-     (concat (eq/accept? ExceptionInfo ExceptionInfo e [])
-             (when (and e message)
-               (eq/accept? message message (.getMessage e) [:message]))
-             (when (and e data)
-               (eq/accept? data data (.getData e) [:data]))))))
+     (-> (concat (eq/accept? ExceptionInfo ExceptionInfo e [])
+                 (when (and e message)
+                   (eq/accept? message message (.getMessage e) [:message]))
+                 (when (and e data)
+                   (eq/accept? data data (.getData e) [:data])))
+         (eq/multi-result-response)))))
 
 (defn in-any-order [expected-values]
   (fn [actual-values]
-    (reduce (fn [results [n expected-value]]
-              (concat results
-                      (if-let [pass-results (some (fn [actual-value]
-                                                    (let [results (eq/accept? expected-value expected-value actual-value [n])]
-                                                      (when (all-pass? results)
-                                                        results)))
-                                                  actual-values)]
-                        pass-results
-                        [{:type :fail
-                          :expected expected-value
-                          :actual actual-values
-                          :message "expected not found in actual values"
-                          :path [n]}])))
-            []
-            (map-indexed vector expected-values))))
+    (-> (reduce (fn [results [n expected-value]]
+                  (concat results
+                          (if-let [pass-results (some (fn [actual-value]
+                                                        (let [results (eq/accept? expected-value expected-value actual-value [n])]
+                                                          (when (all-pass? results)
+                                                            results)))
+                                                      actual-values)]
+                            pass-results
+                            [{:type :fail
+                              :expected expected-value
+                              :actual actual-values
+                              :message "expected not found in actual values"
+                              :path [n]}])))
+                []
+                (map-indexed vector expected-values))
+        (eq/multi-result-response))))
 
 ;;
 ;; Used in sequentials with allowed extra elements:
@@ -111,6 +114,8 @@
                             ::timeout)
                      (catch java.util.concurrent.ExecutionException cee
                        (.getCause cee)))]
+        ; TODO: swap ::timeout and accept? tests. so that after sleep
+        ; we test accept? first, timeout second
         (if (= actual ::timeout)
           [{:path []
             :type :fail
