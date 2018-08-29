@@ -60,27 +60,29 @@
 
 (deftest test-exceptions
   (fact "Match exception class"
-    (/ 1 0) => java.lang.ArithmeticException)
+    (/ 1 0) =throws=> java.lang.ArithmeticException)
   (fact "Match exception class and message"
-    (/ 1 0) => (java.lang.ArithmeticException. "Divide by zero"))
+    (/ 1 0) =throws=> (java.lang.ArithmeticException. "Divide by zero"))
   (fact "Match against predicate"
-    (/ 1 0) => #(-> % .getMessage (str/starts-with? "Divide")))
+    (/ 1 0) =throws=> #(-> % .getMessage (str/starts-with? "Divide")))
   (facts
     (throw (ex-info "oh no" {:reason "too lazy"}))
-    => (ex-info "oh no" {:reason "too lazy"}))
+    =throws=> (ex-info "oh no" {:reason "too lazy"}))
   (let [ei (ex-info "oh no" {:reason "too lazy"})]
     (facts "Special helper for ex-info"
-      (throw ei) => (throws-ex-info "oh no" {:reason "too lazy"})
-      (throw ei) => (throws-ex-info string? {:reason "too lazy"})
-      (throw ei) => (throws-ex-info string? {:reason string?})
-      (throw ei) => (throws-ex-info any {:reason "too lazy"})
-      (throw ei) => (throws-ex-info "oh no"))))
+      (throw ei) =throws=> (throws-ex-info "oh no" {:reason "too lazy"})
+      (throw ei) =throws=> (throws-ex-info string? {:reason "too lazy"})
+      (throw ei) =throws=> (throws-ex-info string? {:reason string?})
+      (throw ei) =throws=> (throws-ex-info any {:reason "too lazy"})
+      (throw ei) =throws=> (throws-ex-info "oh no"))))
 
 ;; FIXME: these tests are expected to fail, uncomment
 ;; and test to see failing some cases:
-#_(deftest test-exception-failures
-    (let [ei (ex-info "oh no" {:reason "too lazy"})]
-      (fact "Wrong message"
-        (throw ei) => (throws-ex-info "oh noz" {:reason "too lazy"}))
-      (fact "Data does not match"
-        (throw ei) => (throws-ex-info "oh no" {:reason "too lazyz"}))))
+
+#_
+(deftest test-exception-failures
+  (let [ei (ex-info "oh no" {:reason "too lazy"})]
+    (fact "Wrong message"
+      (throw ei) => (throws-ex-info "oh noz" {:reason "too lazy"}))
+    (fact "Data does not match"
+      (throw ei) => (throws-ex-info "oh no" {:reason "too lazyz"}))))

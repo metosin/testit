@@ -194,28 +194,28 @@ of a class provided on the right side.
 
 ```clj
   (fact
-    (+ 1 "foo") => (ClassCastException. "java.lang.String cannot be cast to java.lang.Number"))
+    (+ 1 "foo") =throws=> (ClassCastException. "java.lang.String cannot be cast to java.lang.Number"))
 ``` 
 
-Equality with exception instance checks that the evaluation of the left side
+Equality with `=throws=>` arrow checks that the evaluation of the left side
 throws and exception that is an instance of provided exception, and that the
-messages match. Note that the messages are compared with regular equaity, not
+messages match. Note that the messages are compared with regular equality, not
 with extended equality.
 
-The `testit.corte/throws` is an helper that could be more usefull in this kind
-of case, because the the predicate returned by `throws` compares the message with
+The `testit.corte/exception` is an helper that could be more useful in this kind
+of testing, because the the predicate returned by `exception` compares the message with
 the extended equality.
 
 ```clj
   (fact
-    (+ 1 "f00") => (throws ClassCastException #"String.*cast"))
+    (+ 1 "f00") =throws=> (exception ClassCastException #"String.*cast"))
 ```
 
 The message is optional.
 
 ```clj
   (fact
-    (+ 1 "f00") => (throws ClassCastException))
+    (+ 1 "f00") =throws=> (exception ClassCastException))
 ```
 
 ### ex-info
@@ -228,7 +228,7 @@ by `clojure.core/ex-info`. There is a built-in support for this case in
   (let [f (fn [] 
             (throw (ex-info "oh no" {:error 42})))]
     (fact
-      (f) => (ex-info "oh no" {:error 42})))
+      (f) =throws=> (ex-info "oh no" {:error 42})))
 ```
 
 Note that like with exception instances, the `ex-info` does not support
@@ -239,7 +239,7 @@ the `throws-ex-info`.
   (let [f (fn []
             (throw (ex-info "oh no" {:error 42})))]
     (fact
-      (f) => (throws-ex-info #"no" {:error integer?})))
+      (f) =throws=> (throws-ex-info #"no" {:error integer?})))
 ```
 
 ### nil
@@ -313,12 +313,6 @@ example:
     (* 21 2) => 42
     (+ 623 714) => 1337))
 ```
-
-## The `=>` and `=not=>` arrows
-
-The left side of `=>` arrow is a form that is evaluated once. The right side 
-is also evaluated once. Test is then performed by comparing the evaluated values 
-using the extended equality.
 
 # Async tests
 

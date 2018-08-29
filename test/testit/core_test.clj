@@ -26,7 +26,7 @@
     (is (= true (p "bar")))))
 
 (deftest throws-test
-  (let [p (c/throws java.lang.RuntimeException)]
+  (let [p (c/exception java.lang.RuntimeException)]
     (is (= [{:type :pass
              :expected java.lang.RuntimeException
              :message nil
@@ -41,7 +41,7 @@
            (->> (p (java.io.IOException.))
                 :results
                 (map #(dissoc % :actual))))))
-  (let [p (c/throws java.lang.RuntimeException "oh no")]
+  (let [p (c/exception java.lang.RuntimeException "oh no")]
     (is (= [{:type :pass
              :expected java.lang.RuntimeException
              :message nil

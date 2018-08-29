@@ -9,6 +9,7 @@
 ;;
 
 (declare =>)
+(declare =throws=>)
 (declare =eventually=>)
 
 ;;
@@ -38,8 +39,8 @@
 (defn is-not [not-expected]
   (partial not= not-expected))
 
-(defn throws
-  ([ex-class] (throws ex-class nil))
+(defn exception
+  ([ex-class] (exception ex-class nil))
   ([ex-class message]
    (fn [^Throwable e]
      (-> (concat
@@ -51,12 +52,12 @@
 (defn throws-ex-info
   ([message] (throws-ex-info message nil))
   ([message data]
-   (fn [^ExceptionInfo e]
+   (fn [^Exception e]
      (-> (concat (eq/accept? ExceptionInfo ExceptionInfo e [])
                  (when (and e message)
                    (eq/accept? message message (.getMessage e) [:message]))
                  (when (and e data)
-                   (eq/accept? data data (.getData e) [:data])))
+                   (eq/accept? data data (ex-data e) [:data])))
          (eq/multi-result-response)))))
 
 (defn in-any-order [expected-values]
@@ -96,12 +97,26 @@
 ;; Executing tests:
 ;;
 
+(defn run-throws-test [_ expected-value expected-form actual-fn]
+  (try
+    (let [actual (actual-fn)]
+      [{:path     []
+        :type     :fail
+        :message  "should throw exception"
+        :expected expected-form
+        :actual   actual}])
+    (catch Throwable e
+      (eq/accept? expected-value expected-form e []))))
+
 (defn run-test [_ expected-value expected-form actual-fn]
-  (let [actual (try
-                 (actual-fn)
-                 (catch Throwable e
-                   e))]
-    (eq/accept? expected-value expected-form actual [])))
+  (try
+    (eq/accept? expected-value expected-form (actual-fn) [])
+    (catch Throwable e
+      [{:path     []
+        :type     :fail
+        :message  "unexpected exception"
+        :expected expected-form
+        :actual   e}])))
 
 (defn run-test-async [opts expected-value expected-form actual-fn]
   (let [opts (merge default-opts opts)
@@ -151,14 +166,16 @@
 (defmacro fact [& form]
   (let [[opts test-name form] (opts-name-and-body form)
         [actual-form arrow expected-form] form
-        async? (or (-> arrow (= '=eventually=>))
-                   (-> opts :timeout))
+        throws? (= arrow '=throws=>)
+        async? (or (= arrow '=eventually=>)
+                   (:timeout opts))
         test-form `(try
                      (let [actual-fn# (fn [] ~actual-form)
                            expected-value# ~expected-form
-                           run-test# ~(if async?
-                                        `run-test-async
-                                        `run-test)]
+                           run-test# ~(cond
+                                        throws? `run-throws-test
+                                        async? `run-test-async
+                                        :else `run-test)]
                        (doseq [report# (run-test# ~opts
                                                   expected-value#
                                                   '~expected-form

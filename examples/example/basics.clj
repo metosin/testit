@@ -81,13 +81,13 @@
   (testing "extended equality: exception instance"
 
     (fact
-      (+ 1 "foo") => (ClassCastException. "java.lang.String cannot be cast to java.lang.Number"))
+      (+ 1 "foo") =throws=> (ClassCastException. "java.lang.String cannot be cast to java.lang.Number"))
 
     (fact
-      (+ 1 "f00") => (throws ClassCastException))
+      (+ 1 "f00") =throws=> (exception ClassCastException))
 
     (fact
-      (+ 1 "f00") => (throws ClassCastException #"String.*cast"))
+      (+ 1 "f00") =throws=> (exception ClassCastException #"String.*cast"))
 
     )
 
@@ -96,12 +96,12 @@
     (let [f (fn []
               (throw (ex-info "oh no" {:error 42})))]
       (fact
-        (f) => (ex-info "oh no" {:error 42})))
+        (f) =throws=> (ex-info "oh no" {:error 42})))
 
     (let [f (fn []
               (throw (ex-info "oh no" {:error 42})))]
       (fact
-        (f) => (throws-ex-info #"no" {:error integer?})))
+        (f) =throws=> (throws-ex-info #"no" {:error integer?})))
 
     )
 
@@ -155,11 +155,19 @@
      :body string?}))
 
 ; Uncomment to see failing tests:
-#_(deftest failing-test
+
+#_
+(deftest failing-test
   (fact
     {:a {:b {:c -1}}}
     => {:a {:b {:c pos?}}})
 
   (fact
     "foodar" => "foobar")
+
+  (fact
+    (+ 1 "foo") => truthy)
+
+  (fact
+    (+ 1 "foo") => ClassCastException)
   )
