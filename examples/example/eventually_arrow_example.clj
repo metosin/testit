@@ -1,5 +1,5 @@
 (ns example.eventually-arrow-example
-  (require [clojure.test :refer :all]
+  (:require [clojure.test :refer :all]
            [testit.core :refer :all]))
 
 (deftest ^:slow eventually-example
@@ -19,6 +19,4 @@
           (Thread/sleep 1500)
           (reset! a 1))
         (fact
-          (deref a) =eventually=> pos?))))
-
-  )
+          (deref a) =eventually=> pos?)))))
