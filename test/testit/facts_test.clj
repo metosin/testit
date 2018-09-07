@@ -111,16 +111,6 @@
     => string?
     => "foo"))
 
-(deftest ex-message-check
-  (fact
-    (throw (Exception. "1")) =throws=> (ex-message? "1"))
-  (fact
-    (throw (Exception. "12")) =throws=> (ex-message? #"1")))
-
-(deftest cause-ex-info-check
-  (fact
-    (throw (Exception. "1" (ex-info "2" {:foo :bar}))) =throws=> (cause-ex-info? "2" {:foo :bar})))
-
 ;; For some reason (macroexpand '(...)) doesn't work with lein test
 ;; eval needs qualified macro name
 
@@ -133,25 +123,25 @@
     => some?
 
     (eval '(testit.core/fact 1 :bad))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :arrow]
-                                                  :pred 'clojure.core/symbol?
-                                                  :val :bad}]})
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :arrow]
+                                                 :pred 'clojure.core/symbol?
+                                                 :val :bad}]})]
 
     (eval '(testit.core/fact 1 =>))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :expected]
-                                                  :reason "Insufficient input"}]})
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :expected]
+                                                 :reason "Insufficient input"}]})]
 
     (eval '(testit.core/fact 1))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :arrow]
-                                                  :reason "Insufficient input"}]})
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :arrow]
+                                                 :reason "Insufficient input"}]})]
 
     (eval '(testit.core/fact 1 => 1 :bad))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args]
-                                                  :reason "Extra input"}]})
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args]
+                                                 :reason "Extra input"}]})]
 
     (eval '(testit.core/fact "foo" 1 => 1 :bad))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args]
-                                                  :reason "Extra input"}]})))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args]
+                                                 :reason "Extra input"}]})]))
 
 (deftest facts-arity
   (facts
@@ -165,12 +155,12 @@
     => some?
 
     (eval '(testit.core/facts 1 => 1 :extra))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :body :arrow]
-                                                  :reason "Insufficient input"}]})
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :body :arrow]
+                                                 :reason "Insufficient input"}]})]
 
     (eval '(testit.core/facts 1 => 1, 2 =>))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :body :expected]
-                                                  :reason "Insufficient input"}]})))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :body :expected]
+                                                 :reason "Insufficient input"}]})]))
 
 (deftest facts-for-arity
   (facts
@@ -181,10 +171,10 @@
     => some?
 
     (eval '(testit.core/facts-for "foo" 1, => 1, =>))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :fact-forms :expected]
-                                                  :reason "Insufficient input"}]})
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :fact-forms :expected]
+                                                 :reason "Insufficient input"}]})]
 
     (eval '(testit.core/facts-for "foo" 1, => 1, 2 =>))
-    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :fact-forms :arrow]
-                                                  :pred 'clojure.core/symbol?
-                                                  :val 2}]})))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :fact-forms :arrow]
+                                                 :pred 'clojure.core/symbol?
+                                                 :val 2}]})]))
