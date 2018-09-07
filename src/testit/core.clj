@@ -26,8 +26,7 @@
                      :expected any?))
 
 (s/fdef fact
-  :args ::fact
-  :ret any?)
+  :args ::fact)
 
 (defmacro fact [& form]
   (let [{:keys [name value arrow expected]} (s/conform ::fact form)
@@ -48,8 +47,7 @@
                                         :expected any?))))
 
 (s/fdef facts
-  :args ::facts
-  :ret any?)
+  :args ::facts)
 
 (defmacro facts [& form]
   (let [{:keys [name body]} (s/conform ::facts form)]
@@ -63,8 +61,7 @@
                                                   :expected any?))))
 
 (s/fdef facts-for
-  :args ::facts-for
-  :ret any?)
+  :args ::facts-for)
 
 (defmacro facts-for [& forms]
   (let [{:keys [name form-to-test fact-forms]} (s/conform ::facts-for forms)
