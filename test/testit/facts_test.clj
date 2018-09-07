@@ -109,3 +109,13 @@
     "foo"
     => string?
     => "foo"))
+
+(deftest ex-message-check
+  (fact
+    (throw (Exception. "1")) =throws=> (ex-message? "1"))
+  (fact
+    (throw (Exception. "12")) =throws=> (ex-message? #"1")))
+
+(deftest cause-ex-info-check
+  (fact
+    (throw (Exception. "1" (ex-info "2" {:foo :bar}))) =throws=> (cause-ex-info? "2" {:foo :bar})))

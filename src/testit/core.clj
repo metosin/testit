@@ -177,20 +177,47 @@
 ;; ex-info helper:
 ;;
 
-(defn ex-info? [message data]
+(defn ex-message?
+  "Checks that a Throwable is thrown and the message matches given string, regex or predicate."
+  [message]
+  (let [message-check (cond
+                        (instance? java.util.regex.Pattern message) #(re-find message %)
+                        (fn? message) message
+                        :else (partial = message))]
+    (fn [e]
+      (and (instance? Throwable e)
+           (message-check (.getMessage ^Throwable e))))))
+
+(defn ex-info?
+  "Checks that a ExceptionInfo is thrown and the message and data match.
+  Data is checked using deep compare, similar to => arrow.
+  Use `any` to ignore message."
+  [message data]
   {:pre [(or (nil? message)
              (string? message)
              (fn? message))
          (or (nil? data)
              (map? data)
              (fn? data))]}
-  (let [message-check (if (fn? message)
-                        message
-                        (partial = message))
+  (let [message-check (ex-message? message)
         data-check (fn [actual]
                      (every? (comp (partial = :pass) :type)
                              (in/deep-compare [] data data actual)))]
     (fn [e]
       (and (instance? IExceptionInfo e)
-           (message-check (.getMessage ^Throwable e))
+           (message-check e)
            (data-check (.getData ^IExceptionInfo e))))))
+
+(defn cause-ex-info?
+  "Checks that a Throwable is thown and that cause stack contains IExceptionInfo matching
+  ex-info? check."
+  [message data]
+  (let [ex-info-check (ex-info? message data)]
+    (fn [e]
+      (and (instance? Throwable e)
+           (let [t (loop [t e]
+                     (if (instance? IExceptionInfo t)
+                       t
+                       (if-let [c (.getCause t)]
+                         (recur c))))]
+             (ex-info-check t))))))
