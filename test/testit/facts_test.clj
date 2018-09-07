@@ -129,9 +129,15 @@
     (macroexpand '(fact "foo" 1 => 1))
     => some?
 
+    (macroexpand '(fact 1 :bad))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :arrow]
+                                                  :pred 'clojure.core/symbol?
+                                                  :val :bad}]})
+
     (macroexpand '(fact 1 =>))
     =throws=> (cause-ex-info? any {::s/problems [{:path [:args :expected]
                                                   :reason "Insufficient input"}]})
+
     (macroexpand '(fact 1))
     =throws=> (cause-ex-info? any {::s/problems [{:path [:args :arrow]
                                                   :reason "Insufficient input"}]})
@@ -152,6 +158,9 @@
     (macroexpand '(facts "foo" 1 => 1))
     => some?
 
+    (macroexpand '(facts "foo" 1 => 1, 2 => 2))
+    => some?
+
     (macroexpand '(facts 1 => 1 :extra))
     =throws=> (cause-ex-info? any {::s/problems [{:path [:args :body :arrow]
                                                   :reason "Insufficient input"}]})
@@ -159,3 +168,20 @@
     (macroexpand '(facts 1 => 1, 2 =>))
     =throws=> (cause-ex-info? any {::s/problems [{:path [:args :body :expected]
                                                   :reason "Insufficient input"}]})))
+
+(deftest facts-for-arity
+  (facts
+    (macroexpand '(facts-for 1, => 1, => number?))
+    => some?
+
+    (macroexpand '(facts-for "foo" 1, => 1, => number?))
+    => some?
+
+    (macroexpand '(facts-for "foo" 1, => 1, =>))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :fact-forms :expected]
+                                                  :reason "Insufficient input"}]})
+
+    (macroexpand '(facts-for "foo" 1, => 1, 2 =>))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :fact-forms :arrow]
+                                                  :pred 'clojure.core/symbol?
+                                                  :val 2}]})))

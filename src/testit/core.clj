@@ -57,15 +57,21 @@
        ~@(for [{:keys [value arrow expected]} body]
            `(fact ~value ~arrow ~expected)))))
 
+(s/def ::facts-for (s/cat :name (s/? string?)
+                          :form-to-test any?
+                          :fact-forms (s/* (s/cat :arrow symbol?
+                                                  :expected any?))))
+
+(s/fdef facts-for
+  :args ::facts-for
+  :ret any?)
+
 (defmacro facts-for [& forms]
-  (let [[name [form-to-test & fact-forms]] (if (and (-> forms first string?)
-                                                    (-> forms count dec (mod 2) (= 1)))
-                                             ((juxt first rest) forms)
-                                             [nil forms])
+  (let [{:keys [name form-to-test fact-forms]} (s/conform ::facts-for forms)
         result (gensym)]
     `(testing ~name
        (let [~result ~form-to-test]
-         ~@(for [[arrow expected] (partition 2 fact-forms)]
+         ~@(for [{:keys [arrow expected]} fact-forms]
              `(fact ~result ~arrow ~expected))))))
 
 ;;
