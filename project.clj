@@ -3,13 +3,13 @@
   :license {:name "Eclipse Public License", :url "http://www.eclipse.org/legal/epl-v10.html"}
 
   :dependencies [[org.clojure/clojure "1.9.0" :scope "provided"]
-                 [eftest "0.3.1" :scope "test"]
+                 [eftest "0.5.3" :scope "test"]
                  [clj-http "3.4.1" :scope "test"]
                  [org.slf4j/slf4j-nop "1.7.25" :scope "test"]]
 
   :test-paths ["test" "examples"]
 
-  :plugins [[lein-eftest "0.3.1"]]
+  :plugins [[lein-eftest "0.5.3"]]
 
   :test-selectors {:default (complement :slow)
                    :slow :slow
