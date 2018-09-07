@@ -1,5 +1,6 @@
 (ns testit.core
   (:require [clojure.test :refer [assert-expr testing do-report]]
+            [clojure.spec.alpha :as s]
             [testit.in :as in])
   (:import (clojure.lang IExceptionInfo)))
 
@@ -15,16 +16,21 @@
 ;; fact and facts macros:
 ;;
 
-(defn- name-and-body [form]
-  (if (and (-> form first string?)
-           (-> form count (mod 3) (= 1)))
-    ((juxt first rest) form)
-    [nil form]))
-
 (defmulti assert-arrow :arrow)
 
+;; Macro specs are always checked, no need to call instrument
+
+(s/def ::fact (s/cat :name (s/? string?)
+                     :value any?
+                     :arrow symbol?
+                     :expected any?))
+
+(s/fdef fact
+  :args ::fact
+  :ret any?)
+
 (defmacro fact [& form]
-  (let [[name [value arrow expected]] (name-and-body form)
+  (let [{:keys [name value arrow expected]} (s/conform ::fact form)
         msg (or name (str (pr-str value) " " arrow " " expected))]
     `(try
        ~(assert-arrow {:arrow arrow
@@ -36,10 +42,19 @@
          (do-report {:type :error, :message ~msg,
                      :expected '~form, :actual t#})))))
 
+(s/def ::facts (s/cat :name (s/? string?)
+                      :body (s/* (s/cat :value any?
+                                        :arrow symbol?
+                                        :expected any?))))
+
+(s/fdef facts
+  :args ::facts
+  :ret any?)
+
 (defmacro facts [& form]
-  (let [[name body] (name-and-body form)]
+  (let [{:keys [name body]} (s/conform ::facts form)]
     `(testing ~name
-       ~@(for [[value arrow expected] (partition 3 body)]
+       ~@(for [{:keys [value arrow expected]} body]
            `(fact ~value ~arrow ~expected)))))
 
 (defmacro facts-for [& forms]

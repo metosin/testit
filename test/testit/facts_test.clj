@@ -1,6 +1,7 @@
 (ns testit.facts-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
+            [clojure.spec.alpha :as s]
             [testit.core :refer :all]))
 
 (deftest basic-facts
@@ -119,3 +120,42 @@
 (deftest cause-ex-info-check
   (fact
     (throw (Exception. "1" (ex-info "2" {:foo :bar}))) =throws=> (cause-ex-info? "2" {:foo :bar})))
+
+(deftest fact-arity
+  (facts
+    (macroexpand '(fact 1 => 1))
+    => some?
+
+    (macroexpand '(fact "foo" 1 => 1))
+    => some?
+
+    (macroexpand '(fact 1 =>))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :expected]
+                                                  :reason "Insufficient input"}]})
+    (macroexpand '(fact 1))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :arrow]
+                                                  :reason "Insufficient input"}]})
+
+    (macroexpand '(fact 1 => 1 :bad))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args]
+                                                  :reason "Extra input"}]})
+
+    (macroexpand '(fact "foo" 1 => 1 :bad))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args]
+                                                  :reason "Extra input"}]})))
+
+(deftest facts-arity
+  (facts
+    (macroexpand '(facts 1 => 1))
+    => some?
+
+    (macroexpand '(facts "foo" 1 => 1))
+    => some?
+
+    (macroexpand '(facts 1 => 1 :extra))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :body :arrow]
+                                                  :reason "Insufficient input"}]})
+
+    (macroexpand '(facts 1 => 1, 2 =>))
+    =throws=> (cause-ex-info? any {::s/problems [{:path [:args :body :expected]
+                                                  :reason "Insufficient input"}]})))
