@@ -19,6 +19,18 @@ Clojars dependency: `[metosin/testit "0.2.0"]`
 * Does not provide any compatibility with Midje
 * Does not improve output
 
+## Quick example:
+
+```clj
+(deftest test-google-response
+  (fact "Google responds with 200 and some HTML"
+    (http/get "http://google.com")
+    =>
+    {:status 200
+     :headers {"Content-Type" #(str/starts-with? % "text/html")}
+     :body string?}))
+```
+
 ## Quick intro for Midje users
 
 with Midje:
@@ -42,22 +54,254 @@ with `testit`:
 (deftest midje-impersonation
   (facts
     (+ 1 2) => 3
-    {:a 1 :z 1} =in=> {:a 1}))
+    {:a 1 :z 1} => {:a 1}))
 ```
 
-## Facts
+## Extended equality
 
-The `fact` macro generates a `clojure.test/is` form with the arrow in 
-place of test function.
+Midje has coined the term
+_[extended equality](https://github.com/marick/Midje/wiki/Extended-equality)_.
+The purpose of extended equality is to extend the way equality is determined
+to help testing. For example, in the example above:
 
 ```clj
-(macroexpand-1 '(fact (+ 1 2) => 3))
-=> (clojure.test/is (=> 3 (+ 1 2)) "(+ 1 2) => 3")
+  {:a 1 :z 1} => {:a 1}
 ```
 
-The `testit` extends basic `clojure.test/is` functionality
-by adding appropriate assertion logic for `=>`, `=not=>`, `=in=>`, 
-and `=throws=>` symbols.
+The above test passes, because the left side fulfills all key/value pairs
+required by the map on the right.
+
+The rules for extended equality in `testit` can be explained by some examples.
+
+### Function
+
+In extended equality functions are treated as predicates. The evaluated value
+of the left side is given to the function, and if the returned value is truthy
+the test passes.
+
+```clj
+  (facts "extended equality: function"
+    (* 21 2) => integer?
+    (* 21 2) => (partial > 1337))
+```
+
+### Map 
+
+Every key/value pair from right side map is considered a requirement for the
+evaluated value. That means that the left side may have more keys and the
+test passes still.
+
+```clj
+  (fact "right side defines requirements that must be present"
+    {:a 1, :b 2} => {:a 1})
+```
+
+Comparing is done recursively. 
+
+```clj
+  (fact "extended equality is tested recursively"
+    {:a 1, 
+     :b {:c 2}
+     :d 3
+     :e {:f "hello"}}
+    =>
+    {:b {:c 2}
+     :e {:f string?}})
+```
+
+### Vector
+
+Vectors are matched value by value.
+
+```clj
+  (fact
+    [-1 0 +1] => [neg? zero? pos?])
+```
+
+If the vector ends with symbol `...`, the tested vector may contain more
+elements. Note that there is nothing magical with the `...` symbol, it's
+defined in the `testit.core` namespace like this:
+
+```clj
+(def ... ::and-then-some)
+```
+
+Lets see an example, the following test does **not** pass:
+
+```clj
+  (fact
+    [1 2 3 4 5] => [1 2 3])
+  ;=> FAIL in () (basics.clj:56)
+  ;   did not expect more than 3 elements
+  ;   expected: nil
+  ;     actual: 4
+```
+
+but this test does pass:
+
+```clj
+  (fact
+    [1 2 3 4 5] => [1 2 3 ...])
+  ;=> passes
+```
+
+The `testit.core` contains some helpers, like `in-any-order` that returns
+a predicate that tests that the left side contains all provided values ignoring
+the order.
+
+```clj
+  (fact
+    [-1 0 +1] => (in-any-order [0 1]))
+```
+
+The most simple way (but not the only way) to extend the extended equality 
+testing is by creating your own custom predicate functions.
+
+### Set
+
+Comparing extended equality with a set is to test that the left value is
+one of the values in the set on the right.
+
+```clj
+  (fact"
+    :a => #{:a :b :c})
+```
+
+The above test is same as testing with `(contains? #{:a :b :c} :a)`.
+
+### Regular expression
+
+Testit implements extended equality for regular expressions too.
+
+```clj
+  (fact
+    (str 42) => #"\d+")
+```
+
+Matching is done by `clojure.core/re-find`.
+
+### Class
+
+```clj
+  (fact
+    (/ 1 2) => clojure.lang.Ratio)
+```
+
+Matching with a class tests that the left side evaluates to an instance
+of a class provided on the right side.
+
+### Exception
+
+```clj
+  (fact
+    (+ 1 "foo") =throws=> (ClassCastException. "java.lang.String cannot be cast to java.lang.Number"))
+``` 
+
+Equality with `=throws=>` arrow checks that the evaluation of the left side
+throws and exception that is an instance of provided exception, and that the
+messages match. Note that the messages are compared with regular equality, not
+with extended equality.
+
+The `testit.corte/exception` is an helper that could be more useful in this kind
+of testing, because the the predicate returned by `exception` compares the message with
+the extended equality.
+
+```clj
+  (fact
+    (+ 1 "f00") =throws=> (exception ClassCastException #"String.*cast"))
+```
+
+The message is optional.
+
+```clj
+  (fact
+    (+ 1 "f00") =throws=> (exception ClassCastException))
+```
+
+### ex-info
+
+Common exception in clojure land is an `clojure.lang.ExceptionInfo` created
+by `clojure.core/ex-info`. There is a built-in support for this case in
+`testit`.
+
+```clj
+  (let [f (fn [] 
+            (throw (ex-info "oh no" {:error 42})))]
+    (fact
+      (f) =throws=> (ex-info "oh no" {:error 42})))
+```
+
+Note that like with exception instances, the `ex-info` does not support
+extended equality. For this purpose testit provides another helper function,
+the `throws-ex-info`.
+
+```clj
+  (let [f (fn []
+            (throw (ex-info "oh no" {:error 42})))]
+    (fact
+      (f) =throws=> (throws-ex-info #"no" {:error integer?})))
+```
+
+### nil
+
+Testing for `nil` is supported:
+
+```clj
+  (fact
+    (seq []) => nil)
+```
+
+### java.lang.Object
+
+All other cases are tested with the `clojure.core/=`.
+
+```clj
+  (fact
+    (java.net.InetAddress/getByName "localhost")
+    =>
+    (java.net.InetAddress/getByName "127.0.0.1"))
+```
+
+### Escape pod?
+
+What about if you want to escape extended equality and test that the
+left side matched using the normal equality? For that there is a 
+`testit.core/just` that does just that (pun intended).
+
+```clj
+  (fact
+    {:a 1 :b 2} => (just {:a 1 :b 2}))
+``` 
+
+The `just` is defined as follows:
+
+```clj
+; in testit.core
+
+(defn just [expected-value]
+  (partial = expected-value))
+```
+
+On the same vain, there's also helpers like:
+
+```clj
+; also in testit.core
+
+(def any (constantly true))
+
+(defn truthy [v]
+  (if v true false))
+
+(def falsey (complement truthy))
+
+(defn is-not [not-expected]
+  (partial not= not-expected))
+```
+
+And you could also use the existing predicates like `clojure.core/some?`
+for example, or roll your own.
+
+# Facts
 
 The `facts` allows grouping of multiple assertions into a single form. For 
 example:
@@ -70,143 +314,7 @@ example:
     (+ 623 714) => 1337))
 ```
 
-## The `=>` and `=not=>` arrows
-
-The left side of `=>` arrow is a form that is evaluated once. The right side 
-can be a simple form that is also evaluated once. Test is performed by 
-comparing the evaluated values for equality (or non-equality in case of 
-`=not=>`).
-
-```clj
-(deftest simple-form
-  (facts
-    (* 21 2) => 42))
-```
-
-The right side of `=>` can also be a predicate function. In that case the 
-test is performed by passing the value of the left side to the predicate.
-
-```clj
-(deftest function-predicate
-  (facts
-    (* 21 2) => integer?))
-```
-
-A common practice is to call function that returns a predicate. For example:
-
-```clj
-(deftest generate-predicate
-  (facts
-    (* 21 2) => (partial > 1337)))
-```
-
-A bit more complex example:
- 
-```clj
-(defn close-enough [expected-value margin]
-  (fn [result]
-    (<= (- expected-value margin) result (+ expected-value margin))))
-
-(deftest function-generating-predicate
-  (facts
-    (* 21 2) => (close-enough 40 5)))
-```
-
-## Testing exceptions with the `=throws=>` arrow
-
-The `=throws=>` arrow can be used to assert that the evaluation of the left side
-throws an exception. The right side of `=throws=>` can be:
-
-* A class extending `java.lang.Throwable`
-* An object extending `java.lang.Throwable`
-* A predicate function
-* A seq of the above
-
-If the right side is a class, the assertion is made to ensure that the left side
-throws an exception that is, or extends, the class on the right side.
-
-```clj
-(fact "Match exception class"
-  (/ 1 0) =throws=> java.lang.ArithmeticException)
-```
-
-You can also use an exception object. This ensures that the exception is 
-of correct type, and also that the message of the exception equals that of 
-the message on right side.
-
-```clj
-(fact "Match exception class and message"
-  (/ 1 0) =throws=> (java.lang.ArithmeticException. "Divide by zero"))
-```
-
-Most flexible case is to use a predicate function.
-
-```clj
-(fact "Match against predicate"
-  (/ 1 0) =throws=> #(-> % .getMessage (str/starts-with? "Divide")))
-```
-
-Finally, `=throws=>` supports a sequence. The thrown exception is tested 
-against the first element from the seq, and it's cause to the second, and 
-so on. This is very handy when the actual exception you are interested is 
-wrapped into another exception, for example to 
-`java.util.concurrent.ExecutionException`.
-
-This example creates an `java.lang.ArithmeticException`, wrapped into a 
-`java.lang.RuntimeException`, wrapped into a 
-`java.util.concurrent.ExecutionException`. 
-
-The `fact` then tests that the left side throws an exception that extends 
-`java.lang.Exception` and has a message `"1"`, and that is caused by another 
-exception, also extending `java.lang.Exception` with message `"2"`, that is 
-caused yet another exception, this time with message `"3"`:
-
-```clj
-(fact
-  (->> (java.lang.ArithmeticException. "3")
-       (java.lang.RuntimeException. "2")
-       (java.util.concurrent.ExecutionException. "1")
-       (throw))
-  =throws=> [(Exception. "1")
-             (Exception. "2")
-             (Exception. "3")])
-```
-
-A common pattern with Clojure code is to generate exceptions with 
-`clojure.core/ex-info`. To help testing these kind of exceptions, `testit` 
-provides a function `testit.core/ex-info?`. The function accepts a message 
-(string or a predicate) and a data (map or a predicate), and returns a predicate
-that tests given exception type (must extend `clojure.lang.IExceptionInfo`), 
-message and data.
-
-```clj
-(fact "Match ex-info exceptions"
-  (throw (ex-info "oh no" {:reason "too lazy"}))
-  =throws=>
-  (ex-info? "oh no" {:reason "too lazy"}))
-```
-
-The above test ensures that the left side throws an `ex-info` exception with 
-expected message and data.  
-
-### Helper predicates
-
-#### `any`
-
-The `any` is a predicate that matches anything. It's implemented like
-this:
-
-```clj
-; in ns testit.core:
-(def any (constantly true))
-```
-
-#### `truthy` and `falsey`
-
-Other helper predicate are `testit.core/truthy` and `testit.core/falsey` 
-which test given values for clojure 'truthines' and 'falsines' respectively.
-
-## The `=eventually=>` arrow
+# Async tests
 
 You can use the `=eventually=>` arrow to test async code.
 
@@ -216,284 +324,56 @@ You can use the `=eventually=>` arrow to test async code.
     (Thread/sleep 100)
     (reset! a 1))
   (fact
-    (deref a) =eventually=> pos?))
+    @a =eventually=> pos?))
 ```
 
-On the code above, the result of evaluating the `(deref a)` is initially -1. 
-The test does not match the expected predicate `pos?`. How ever, the 
-`=eventually=>` will keep repeating the test until the test matches, or a 
-timeout occurs. Eventually the future resets the atom to 1 and the test
-passes.
+On the code above, evaluating the `@a` yields -1.  The test does not match 
+the expected predicate `pos?`. How ever, the`=eventually=>` will keep 
+repeating the test until the test matches, or a timeout occurs. Eventually 
+the future resets the atom to 1 and the test passes.
 
 By default the `=eventually=>` keeps evaluating and testing every 50 ms and 
-the timeout is 1 sec. You can change these by binding 
-`testit.core/*eventually-polling-ms*` and 
-`testit.core/*eventually-timeout-ms*`. For example, code below sets the 
-timeout to 2 sec.
+the timeout is 1 sec. You can change these by providing your values as options
+to the `fact` form:
 
 ```clj
-(testing "You can change the timeout from it's default of 1sec"
-  (binding [*eventually-timeout-ms* 2000]
-    (let [a (atom -1)]
-      (future
-        (Thread/sleep 1500)
-        (reset! a 1))
-      (fact
-        (deref a) =eventually=> pos?))))
+  (let [a (atom -1)]
+    (future
+      (Thread/sleep 50)
+      (reset! a 1))
+    (fact {:timeout 200}
+      @a =eventually=> pos?))
 ```
+ 
+### Error messages
 
-## `=in=>`
-
-The `=in=>` is for more relaxed equality tests, like `contains` in Midje. For example:
+Testit tries to provide informative error messages. For example:
 
 ```clj
 (fact
-  {:a 1 :b 2} => {:a 1})  ;=> FAILS
-```
-
-```clj
-(fact
-  {:a 1 :b 2} =in=> {:a 1})  ;=> Ok
-```
-
-This ensures that the actual (left side of `=in=>`) contains everything the expected (right
-side) contains. 
-
-### Testing maps with `contains`
-
-When given a map, `=in=>` checks that all given keys are found and they match 
-expectations. Expected map can be nested and can contain predicates. For example:
-
-```clj
-(fact
-  {:a 1
-   :b {:c 42
-       :d {:e "foo"}}} 
-  =in=> 
-  {:b {:c pos?
-       :d {:e string?}}})
-```
-
-A very common use-case for this kind of testing is testing the HTTP 
-responses. Here's an example.
-
-```clj
-(ns example.http-example
-  (:require [clojure.test :refer :all]
-            [testit.core :refer :all]
-            [clojure.string :as str]
-            [clj-http.client :as http]))
-
-(deftest test-google-response
-  (fact
-    (http/get "http://google.com")
-    =in=> 
-    {:status 200
-     :headers {"Content-Type" #(str/starts-with? % "text/html")}
-     :body string?}))
-```
-
-### Testing sequentials with `=in=>`
-
-When given a vector, `=in=>` checks that the
-expected value contains matches for each expected value, where the expected
-values can be basic values or predicates. For example:
-
-```clj
-(fact
-  [1 2 3] =in=> [1 pos? integer?])
-```
-
-The matching is recursive, so this works too:
-
-```clj
-(fact
-  [{:a 1, :b 1}
-   {:a 2, :b 2}
-   {:a 3, :b 3}]
-  => 
-  [{:a 1}, map?, {:b pos?}])
-```
-
-#### ...and there can be more
-
-If the expectation vector ends with symbol `...`, the actual vector can
-contain more elements, they are just ignored. For example, these tests all
-pass:
-
-```clj
-(facts
-  [1 2 3] =in=> [1 2 3 ...]
-  [1 2 3 4] =in=> [1 2 3 ...]
-  [1 2 3 4 5] =in=> [1 2 3 ...])
-```
-
-This does not pass:
-
-```clj
-(fact
-  [1 2] =in=> [1 2 3 ...])  ;=> FAILS
-```
-
-### When the order is not important
-
-If the expected vector has metadata `:in-any-order`, the `=in=>` checks that
-all expected elements are found in actual, but they are allowed to be in any
-order.
-
-```clj
-(facts
-  [-1 0 +1] =in=> ^:in-any-order [0 +1]
-  [-1 0 +1] =in=> ^:in-any-order [pos? neg?]))
-```
-
-### Error messages with =in=>
-
-The `=in=>` tries to provide informative error messages. For example:
-
-```clj
-(fact
-  {:a {:b {:c -1}}} =in=> {:a {:b {:c pos?}}})
+  {:a {:b {:c -1}}} => {:a {:b {:c pos?}}})
 ```
 
 ```
-FAIL in (failing-test) (in_example.clj:52)
-{:a {:b {:c -1}}} =in=> {:a {:b {:c pos?}}}:
-  in [:a :b :c]:
-  (pos? -1) => false
-    expected: pos?
-      actual: -1
-expected: {:a {:b {:c pos?}}}
-  actual: {:a {:b {:c -1}}}
+FAIL in example.basics/failing-test (basics.clj:158)
+(pos? -1) => false
+expected: pos?
+  actual: -1
 ```
-
-The `in [:a :b :c]` in above error message shows the path to nested element
-that failed the test.
-
-Here's another example with sequential values:
-
-```clj
-(fact
-  [0 1 2 3] =in=> [0 1 42 3])
-```
-
-```
-FAIL in (failing-test) (in_example.clj:54)
-[0 1 2 3] =in=> [0 1 42 3]:
-  in [2]:
-  (= 42 2) => false
-    expected: 42
-      actual: 2
-expected: [0 1 42 3]
-  actual: [0 1 2 3]
-```
-
-Strings have special reporting:
-
-```clj
-(fact
-  "foodar" => "foobar")
-```
-
-```
-FAIL in (failing-test) (in_example.clj:56)
-foodar =in=> foobar:
-    (= "foobar" "foodar") => false
-    expected: "foobar"
-      actual: "foodar"
-        diff:     ^^^
-expected: "foobar"
-  actual: "foodar"
-```
-
-Here's an example with nested structures:
-
-```clj
-(fact
-  {:a {:b [0 1 2 {:c "foodar"}]}}
-  =in=>
-  {:a {:b [0 neg? 2 {:c "foobar"}]}})
-```
-
-```
-FAIL in (failing-test) (in_example.clj:58)
-{:a {:b [0 1 2 {:c "foodar"}]}} =in=> {:a {:b [0 neg? 2 {:c "foobar"}]}}:
-  in [:a :b 1]:
-  (neg? 1) => false
-    expected: neg?
-      actual: 1      
-  in [:a :b 3 :c]:
-  (= "foobar" "foodar") => false
-    expected: "foobar"
-      actual: "foodar"
-        diff:     ^^^
-expected: {:a {:b [0 neg? 2 {:c "foobar"}]}}
-  actual: {:a {:b [0 1 2 {:c "foodar"}]}}
-```
-
-Note that the above message reports two errors, first at `[:a :b 1]` and
-the second at `[:a :b 3 :c]`.
-
-## Extend via functions
-
-The `testit` is designed to be easily extendable using plain old functions. You
-can provide your own predicates, and combine your predicates with those provided
-by `clojure.core` and `testit`.
-
-Here's an example that combines `contains` and `ex-info?`: 
-
-```clj
-(fact "Match ex-info exceptions with combine"
-  (throw (ex-info "oh no" {:reason "too lazy"}))
-  =throws=>
-  (ex-info? any (contains {:reason string?})))
-```
-
-This tests that the left side throws an `ex-info` exception, with any
-message and a data that contains at least a `:reason` that must be a string.
-
-## Extending `testit` with your own arrows
-
-You can add your custom arrows using `clojure.test/assert-expr`. For example,
-here's a simple extension that asserts that the test is completed within 1 sec.
-
-```clj
-(ns testit.your-own-arrow
-  (:require [clojure.test :refer :all]
-            [testit.core :refer :all]))
-
-(declare =quickly=>)
-(defmethod assert-expr '=quickly=> [msg [_ & body]]
-  (assert-expr msg `(let [d# (future ~@body)
-                          r# (deref d# 1000 ::timeout)]
-                      (if (= r# ::timeout)
-                        false
-                        r#))))
-```
-
-And then you use it like this:
-
-```clj
-(deftest things-must-be-fast-tests
-  (fact
-    (do (Thread/sleep 200) 42) =quickly=> 42)    ;=> PASS
-  (fact
-    (do (Thread/sleep 2000) 42) =quickly=> 42))  ;=> FAIL
-```
-
-In the example above, the first fact passes but the second fails after 1 sec.
 
 ## TODO
 
 - [x] Implement `=eventually=>` for async tests
 - [x] Add support to comparing seq's and lists
 - [ ] Detect and complain about common mistakes like using multile `=>` forms with `fact`
-- [ ] Provide better error messages when right side is a predicate
+- [ ] Provide better error messages
 - [ ] Figure out a way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
+- [ ] Check https://github.com/jimpil/fudje
+- [ ] Explain use of MultiResultResponse
 
 ## License
 
-Copyright © 2017 [Metosin Oy](http://metosin.fi)
+Copyright © 2018 [Metosin Oy](http://metosin.fi)
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

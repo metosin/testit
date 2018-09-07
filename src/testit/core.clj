@@ -1,196 +1,217 @@
 (ns testit.core
   (:require [clojure.test :refer [assert-expr testing do-report]]
-            [testit.in :as in])
-  (:import (clojure.lang IExceptionInfo)))
+            [testit.ext-eq :as eq])
+  (:import (java.util.concurrent TimeUnit)
+           (clojure.lang ExceptionInfo)))
 
 ;;
-;; Common predicates:
+;; Arrow:
+;;
+
+(declare =>)
+(declare =throws=>)
+(declare =eventually=>)
+
+;;
+;; Helpers to check for passed tests:
+;;
+
+(defn pass? [response]
+  (-> response :type (= :pass)))
+
+(defn all-pass? [responses]
+  (every? pass? responses))
+
+;;
+;; Common predicates and predicate factories:
 ;;
 
 (def any (constantly true))
-(defn truthy [v] (if v true false))
-(defn falsey [v] (if-not v true false))
+
+(defn truthy [v]
+  (if v true false))
+
+(def falsey (complement truthy))
+
+(defn just [expected-value]
+  (partial = expected-value))
+
+(defn is-not [not-expected]
+  (partial not= not-expected))
+
+(defn exception
+  ([ex-class] (exception ex-class nil))
+  ([ex-class message]
+   (fn [^Throwable e]
+     (-> (concat
+           (eq/accept? ex-class ex-class e [])
+           (when (and e message)
+             (eq/accept? message message (.getMessage e) [:message])))
+         (eq/multi-result-response)))))
+
+(defn throws-ex-info
+  ([message] (throws-ex-info message nil))
+  ([message data]
+   (fn [^Exception e]
+     (-> (concat (eq/accept? ExceptionInfo ExceptionInfo e [])
+                 (when (and e message)
+                   (eq/accept? message message (.getMessage e) [:message]))
+                 (when (and e data)
+                   (eq/accept? data data (ex-data e) [:data])))
+         (eq/multi-result-response)))))
+
+(defn in-any-order [expected-values]
+  (fn [actual-values]
+    (-> (reduce (fn [results [n expected-value]]
+                  (concat results
+                          (if-let [pass-results (some (fn [actual-value]
+                                                        (let [results (eq/accept? expected-value expected-value actual-value [n])]
+                                                          (when (all-pass? results)
+                                                            results)))
+                                                      actual-values)]
+                            pass-results
+                            [{:type :fail
+                              :expected expected-value
+                              :actual actual-values
+                              :message "expected not found in actual values"
+                              :path [n]}])))
+                []
+                (map-indexed vector expected-values))
+        (eq/multi-result-response))))
 
 ;;
-;; fact and facts macros:
-;;
-
-(defn- name-and-body [form]
-  (if (and (-> form first string?)
-           (-> form count (mod 3) (= 1)))
-    ((juxt first rest) form)
-    [nil form]))
-
-(defmulti assert-arrow :arrow)
-
-(defmacro fact [& form]
-  (let [[name [value arrow expected]] (name-and-body form)
-        msg (or name (str (pr-str value) " " arrow " " expected))]
-    `(try
-       ~(assert-arrow {:arrow arrow
-                       :msg msg
-                       :actual value
-                       :expected expected
-                       :form form})
-       (catch Throwable t#
-         (do-report {:type :error, :message ~msg,
-                     :expected '~form, :actual t#})))))
-
-(defmacro facts [& form]
-  (let [[name body] (name-and-body form)]
-    `(testing ~name
-       ~@(for [[value arrow expected] (partition 3 body)]
-           `(fact ~value ~arrow ~expected)))))
-
-(defmacro facts-for [& forms]
-  (let [[name [form-to-test & fact-forms]] (if (and (-> forms first string?)
-                                                    (-> forms count dec (mod 2) (= 1)))
-                                             ((juxt first rest) forms)
-                                             [nil forms])
-        result (gensym)]
-    `(testing ~name
-       (let [~result ~form-to-test]
-         ~@(for [[arrow expected] (partition 2 fact-forms)]
-             `(fact ~result ~arrow ~expected))))))
-
-;;
-;; Extending clojure.test for => and =not=>
-;;
-
-(defmacro format-expected [expected actual]
-  `(if (fn? ~expected) '(~expected ~actual) ~expected))
-
-(defn match-expectation? [expected actual]
-  (if (fn? expected)
-    (expected actual)
-    (= expected actual)))
-
-(declare =>)
-(defmethod assert-arrow '=> [{:keys [expected actual msg]}]
-  `(let [value# ~actual
-         expected# (format-expected ~expected ~actual)]
-     (if (match-expectation? ~expected value#)
-       (do-report {:type :pass, :message ~msg, :expected expected#, :actual value#})
-       (do-report {:type :fail, :message ~msg, :expected expected#, :actual value#}))))
-
-(declare =not=>)
-(defmethod assert-arrow '=not=> [{:keys [expected actual msg]}]
-  `(let [value# ~actual
-         expected# (format-expected ~expected value#)]
-     (if-not (match-expectation? ~expected value#)
-       (do-report {:type :pass, :message ~msg, :expected expected#, :actual value#})
-       (do-report {:type :fail, :message ~msg, :expected expected#, :actual value#}))))
-
-(declare =in=>)
-(defmethod assert-arrow '=in=> [{:keys [expected actual msg]}]
-  `(do-report (in/test-in ~msg ~expected ~actual)))
-
-;;
-;; =eventually=>
-;;
-
-(def ^:dynamic *eventually-polling-ms* 50)
-(def ^:dynamic *eventually-timeout-ms* 1000)
-
-(defn eventually [expected actual]
-  (let [polling *eventually-polling-ms*
-        deadline (+ (System/currentTimeMillis) *eventually-timeout-ms*)
-        time-until-deadline (fn [] (- deadline (System/currentTimeMillis)))]
-    (loop [time-left (time-until-deadline)]
-      (let [v (try
-                (deref (actual)
-                       time-left
-                       ::timeout)
-                (catch java.util.concurrent.ExecutionException e
-                  (.getCause e)))
-            r (try
-                (expected v)
-                (catch Exception _
-                  nil))]
-        (if r
-          {:success? true, :value v}
-          (do (Thread/sleep polling)
-              (let [time-left (time-until-deadline)]
-                (if (pos? time-left)
-                  (recur time-left)
-                  {:success? false, :value v}))))))))
-
-(declare =eventually=>)
-(defmethod assert-arrow '=eventually=> [{:keys [msg expected actual]}]
-  `(let [expected# (format-expected ~expected ~actual)
-         result# (eventually
-                   (let [e# ~expected]
-                     (if (fn? e#) e# (partial = e#)))
-                   (fn [] (future ~actual)))]
-     (if (:success? result#)
-       (do-report {:type :pass, :message ~msg, :expected expected#, :actual (:value result#)})
-       (do-report {:type :fail, :message ~msg, :expected expected#, :actual (:value result#)}))))
-
-(declare =eventually-in=>)
-(defmethod assert-arrow '=eventually-in=> [{:keys [msg expected actual]}]
-  `(do-report (in/test-in-eventually ~msg ~expected ~actual *eventually-polling-ms* *eventually-timeout-ms*)))
-
-;;
-;; =throes=>
-;;
-
-(defn cause-seq [^Throwable exception]
-  (if exception
-    (lazy-seq
-      (cons exception
-            (cause-seq (.getCause exception))))))
-
-(defn exception-match? [expected exception]
-  (cond
-    (class? expected) (instance? expected exception)
-    (instance? Throwable expected) (and (instance? (class expected) exception)
-                                        (= (.getMessage ^Throwable expected)
-                                           (.getMessage ^Throwable exception)))
-    (fn? expected) (expected exception)
-    (map? expected) (and (instance? IExceptionInfo exception)
-                         (in/deep-compare
-                           nil
-                           expected
-                           expected
-                           (.getData ^IExceptionInfo exception)))
-    (seq expected) (->> (map exception-match? expected (cause-seq exception))
-                        (every? truthy))))
-
-(declare =throws=>)
-(defmethod assert-arrow '=throws=> [{:keys [expected actual msg]}]
-  `(let [expected# (format-expected ~expected ~actual)]
-     (try
-       ~actual
-       (do-report {:type :fail, :message ~msg, :expected expected#, :actual nil})
-       (catch Throwable ex#
-         (if (exception-match? ~expected ex#)
-           (do-report {:type :pass, :message ~msg, :expected expected#, :actual ex#})
-           (do-report {:type :fail, :message ~msg, :expected expected#, :actual ex#}))))))
-
-;;
-;; Used in =in=> with sequentials:
+;; Used in sequentials with allowed extra elements:
 ;;
 
 (def ... ::and-then-some)
 
 ;;
-;; ex-info helper:
+;; fact options:
 ;;
 
-(defn ex-info? [message data]
-  {:pre [(or (nil? message)
-             (string? message)
-             (fn? message))
-         (or (nil? data)
-             (map? data)
-             (fn? data))]}
-  (let [message-check (if (fn? message)
-                        message
-                        (partial = message))
-        data-check (fn [actual]
-                     (every? (comp (partial = :pass) :type)
-                             (in/deep-compare [] data data actual)))]
-    (fn [e]
-      (and (instance? IExceptionInfo e)
-           (message-check (.getMessage ^Throwable e))
-           (data-check (.getData ^IExceptionInfo e))))))
+(def ^:dynamic default-opts
+  {:polling 100
+   :timeout (.toMillis TimeUnit/MINUTES 1)})
+
+;;
+;; Executing tests:
+;;
+
+(defn run-throws-test [_ expected-value expected-form actual-fn]
+  (try
+    (let [actual (actual-fn)]
+      [{:path     []
+        :type     :fail
+        :message  "should throw exception"
+        :expected expected-form
+        :actual   actual}])
+    (catch Throwable e
+      (eq/accept? expected-value expected-form e []))))
+
+(defn run-test [_ expected-value expected-form actual-fn]
+  (try
+    (eq/accept? expected-value expected-form (actual-fn) [])
+    (catch Throwable e
+      [{:path     []
+        :type     :fail
+        :message  "unexpected exception"
+        :expected expected-form
+        :actual   e}])))
+
+(defn run-test-async [opts expected-value expected-form actual-fn]
+  (let [opts (merge default-opts opts)
+        now (System/currentTimeMillis)
+        deadline (-> opts :timeout (+ now))]
+    (loop []
+      (let [actual (try
+                     (deref (future-call actual-fn)
+                            (- deadline (System/currentTimeMillis))
+                            ::timeout)
+                     (catch java.util.concurrent.ExecutionException cee
+                       (.getCause cee)))]
+        ; TODO: swap ::timeout and accept? tests. so that after sleep
+        ; we test accept? first, timeout second
+        (if (= actual ::timeout)
+          [{:path []
+            :type :fail
+            :message "timeout"
+            :expected expected-form
+            :actual actual}]
+          (let [result (eq/accept? expected-value expected-form actual [])]
+            (if (all-pass? result)
+              result
+              (do (Thread/sleep (-> opts :polling))
+                  (recur)))))))))
+
+;;
+;; Parse fact form into options, test name and arrow form:
+;;
+
+(defn opts-name-and-body [form]
+  (let [[opts form] (if (and (-> form first map?)
+                             (-> form second (not= '=>)))
+                      [(first form) (rest form)]
+                      [nil form])
+        [name form] (if (and (-> form first string?)
+                             (-> form second (not= '=>)))
+                      [(first form) (rest form)]
+                      [nil form])]
+    [opts name form]))
+
+;;
+;; fact and facts macros:
+;;
+
+
+(defmacro fact [& form]
+  (let [[opts test-name form] (opts-name-and-body form)
+        [actual-form arrow expected-form] form
+        throws? (= arrow '=throws=>)
+        async? (or (= arrow '=eventually=>)
+                   (:timeout opts))
+        test-form `(try
+                     (let [actual-fn# (fn [] ~actual-form)
+                           expected-value# ~expected-form
+                           run-test# ~(cond
+                                        throws? `run-throws-test
+                                        async? `run-test-async
+                                        :else `run-test)]
+                       (doseq [report# (run-test# ~opts
+                                                  expected-value#
+                                                  '~expected-form
+                                                  actual-fn#)]
+                         (do-report report#)))
+                     (catch Throwable t#
+                       (do-report {:type :error
+                                   :message ~(str (pr-str actual-form)
+                                                  " "
+                                                  arrow
+                                                  " "
+                                                  (pr-str expected-form)
+                                                  " caused an unexpected exception")
+                                   :expected '~expected-form
+                                   :actual t#})))]
+    (if test-name
+      (list 'clojure.test/testing test-name test-form)
+      test-form)))
+
+(defmacro facts [& form]
+  (let [[opts test-name forms] (opts-name-and-body form)
+        opts (or opts {})
+        test-forms (for [fact-form (partition 3 forms)]
+                     (list* 'testit.core/fact opts fact-form))]
+    (if test-name
+      (list* 'clojure.test/testing test-name test-forms)
+      (list* 'do test-forms))))
+
+(defmacro facts-for [& forms]
+  (let [[opts test-name [actual & forms]] (opts-name-and-body forms)
+        opts (or opts {})
+        actual-sym (gensym)
+        test-forms `(let [~actual-sym ~actual]
+                      ~@(for [fact-form (partition 2 forms)]
+                          (list* 'testit.core/fact opts actual-sym fact-form)))]
+    (if test-name
+      (list 'clojure.test/testing test-name test-forms)
+      test-forms)))
+
