@@ -2,7 +2,7 @@
 
 ## 0.3.0 (2018-09-21)
 
-**[compare](https://github.com/metosin/testit/compare/0.2.1...0.2.2)**
+**[compare](https://github.com/metosin/testit/compare/0.2.2...0.3.0)**
 
 - Validate `fact`, `fact` and `facts-for` parameters using Spec
 - Support regex as exception message check
