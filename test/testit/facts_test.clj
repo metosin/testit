@@ -1,6 +1,7 @@
 (ns testit.facts-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
+            [clojure.spec.alpha :as s]
             [testit.core :refer :all]))
 
 (deftest basic-facts
@@ -109,3 +110,71 @@
     "foo"
     => string?
     => "foo"))
+
+;; For some reason (macroexpand '(...)) doesn't work with lein test
+;; eval needs qualified macro name
+
+(deftest fact-arity
+  (facts
+    (eval '(testit.core/fact 1 => 1))
+    => some?
+
+    (eval '(testit.core/fact "foo" 1 => 1))
+    => some?
+
+    (eval '(testit.core/fact 1 :bad))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :arrow]
+                                                 :pred 'clojure.core/symbol?
+                                                 :val :bad}]})]
+
+    (eval '(testit.core/fact 1 =>))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :expected]
+                                                 :reason "Insufficient input"}]})]
+
+    (eval '(testit.core/fact 1))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :arrow]
+                                                 :reason "Insufficient input"}]})]
+
+    (eval '(testit.core/fact 1 => 1 :bad))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args]
+                                                 :reason "Extra input"}]})]
+
+    (eval '(testit.core/fact "foo" 1 => 1 :bad))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args]
+                                                 :reason "Extra input"}]})]))
+
+(deftest facts-arity
+  (facts
+    (eval '(testit.core/facts 1 => 1))
+    => some?
+
+    (eval '(testit.core/facts "foo" 1 => 1))
+    => some?
+
+    (eval '(testit.core/facts "foo" 1 => 1, 2 => 2))
+    => some?
+
+    (eval '(testit.core/facts 1 => 1 :extra))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :body :arrow]
+                                                 :reason "Insufficient input"}]})]
+
+    (eval '(testit.core/facts 1 => 1, 2 =>))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :body :expected]
+                                                 :reason "Insufficient input"}]})]))
+
+(deftest facts-for-arity
+  (facts
+    (eval '(testit.core/facts-for 1, => 1, => number?))
+    => some?
+
+    (eval '(testit.core/facts-for "foo" 1, => 1, => number?))
+    => some?
+
+    (eval '(testit.core/facts-for "foo" 1, => 1, =>))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :fact-forms :expected]
+                                                 :reason "Insufficient input"}]})]
+
+    (eval '(testit.core/facts-for "foo" 1, => 1, 2 =>))
+    =throws=> [any (ex-info? any {::s/problems [{:path [:args :fact-forms :arrow]
+                                                 :pred 'clojure.core/symbol?
+                                                 :val 2}]})]))

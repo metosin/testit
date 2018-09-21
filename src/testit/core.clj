@@ -1,5 +1,6 @@
 (ns testit.core
   (:require [clojure.test :refer [assert-expr testing do-report]]
+            [clojure.spec.alpha :as s]
             [testit.in :as in])
   (:import (clojure.lang IExceptionInfo)))
 
@@ -15,16 +16,20 @@
 ;; fact and facts macros:
 ;;
 
-(defn- name-and-body [form]
-  (if (and (-> form first string?)
-           (-> form count (mod 3) (= 1)))
-    ((juxt first rest) form)
-    [nil form]))
-
 (defmulti assert-arrow :arrow)
 
+;; Macro specs are always checked, no need to call instrument
+
+(s/def ::fact (s/cat :name (s/? string?)
+                     :value any?
+                     :arrow symbol?
+                     :expected any?))
+
+(s/fdef fact
+  :args ::fact)
+
 (defmacro fact [& form]
-  (let [[name [value arrow expected]] (name-and-body form)
+  (let [{:keys [name value arrow expected]} (s/conform ::fact form)
         msg (or name (str (pr-str value) " " arrow " " expected))]
     `(try
        ~(assert-arrow {:arrow arrow
@@ -36,21 +41,34 @@
          (do-report {:type :error, :message ~msg,
                      :expected '~form, :actual t#})))))
 
+(s/def ::facts (s/cat :name (s/? string?)
+                      :body (s/* (s/cat :value any?
+                                        :arrow symbol?
+                                        :expected any?))))
+
+(s/fdef facts
+  :args ::facts)
+
 (defmacro facts [& form]
-  (let [[name body] (name-and-body form)]
+  (let [{:keys [name body]} (s/conform ::facts form)]
     `(testing ~name
-       ~@(for [[value arrow expected] (partition 3 body)]
+       ~@(for [{:keys [value arrow expected]} body]
            `(fact ~value ~arrow ~expected)))))
 
+(s/def ::facts-for (s/cat :name (s/? string?)
+                          :form-to-test any?
+                          :fact-forms (s/* (s/cat :arrow symbol?
+                                                  :expected any?))))
+
+(s/fdef facts-for
+  :args ::facts-for)
+
 (defmacro facts-for [& forms]
-  (let [[name [form-to-test & fact-forms]] (if (and (-> forms first string?)
-                                                    (-> forms count dec (mod 2) (= 1)))
-                                             ((juxt first rest) forms)
-                                             [nil forms])
+  (let [{:keys [name form-to-test fact-forms]} (s/conform ::facts-for forms)
         result (gensym)]
     `(testing ~name
        (let [~result ~form-to-test]
-         ~@(for [[arrow expected] (partition 2 fact-forms)]
+         ~@(for [{:keys [arrow expected]} fact-forms]
              `(fact ~result ~arrow ~expected))))))
 
 ;;
@@ -180,13 +198,15 @@
 (defn ex-info? [message data]
   {:pre [(or (nil? message)
              (string? message)
-             (fn? message))
+             (fn? message)
+             (instance? java.util.regex.Pattern message))
          (or (nil? data)
              (map? data)
              (fn? data))]}
-  (let [message-check (if (fn? message)
-                        message
-                        (partial = message))
+  (let [message-check (cond
+                        (instance? java.util.regex.Pattern message) (partial re-find message)
+                        (fn? message) message
+                        :else (partial = message))
         data-check (fn [actual]
                      (every? (comp (partial = :pass) :type)
                              (in/deep-compare [] data data actual)))]

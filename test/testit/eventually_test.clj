@@ -4,7 +4,7 @@
             [testit.core :refer :all]))
 
 (deftest ^:slow eventually-test
-  (fact "immediatelly pass"
+  (facts "immediatelly pass"
     (+ 1 2) =eventually=> 3
     3 =eventually=> (+ 1 2)
     (+ 1 2) =eventually=> pos?
@@ -32,7 +32,7 @@
       (f) =eventually=> 42)))
 
 (deftest ^:slow direct-eventually-test
-  (fact "direct eventually tests"
+  (facts "direct eventually tests"
     (eventually (partial = 1) (fn [] (future 1))) => truthy
     (eventually (partial = 1) (fn [] (future 2))) => falsey)
 
@@ -99,7 +99,7 @@
         (- end start) => (partial > 260)))))
 
 (deftest ^:slow eventually-in-test
-  (fact "immediatelly pass"
+  (facts "immediatelly pass"
     (+ 1 2) =eventually-in=> 3
     3 =eventually-in=> (+ 1 2)
     (+ 1 2) =eventually-in=> pos?
