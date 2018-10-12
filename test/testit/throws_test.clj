@@ -1,53 +1,8 @@
-(ns testit.facts-test
-  (:require [clojure.test :refer :all]
-            [clojure.string :as str]
+(ns testit.throws-test
+  (:require [clojure.test :refer [deftest]]
             [clojure.spec.alpha :as s]
-            [testit.core :refer :all]))
-
-(deftest basic-facts
-  (facts
-    42 => 42
-    42 => pos?
-    (+ 40 2) => 42
-
-    [1 2 3] => [1 2 3]
-    [1 2 3] => vector?
-
-    42 =not=> 1337
-    [1 2 3] =not=> string?)
-
-  (let [answer 42
-        half 21]
-    (facts
-      42 => pos?
-      42 => (partial > 1337)
-      42 => (* 2 21)
-      42 => answer
-      42 => (* half 2))))
-
-(deftest some-regressions
-  (let [a "a"]
-    (fact
-      a => a))
-
-  (let [a "a"
-        b "b"]
-    (fact
-      a =not=> b)))
-
-(deftest facts-can-be-named
-  (fact "42 is the answer"
-    42 => integer?)
-  (fact "vectors are not strings"
-    [1 2 3] =not=> string?))
-
-(deftest expected-can-be-fn-generating-fn
-  (let [response {:status 200}
-        status (fn [expected-status]
-                 (fn [response]
-                   (= (:status response) expected-status)))]
-    (facts
-      response => (status 200))))
+            [clojure.string :as str]
+            [testit.core :refer [any ex-info? fact facts => =throws=>]]))
 
 (deftest test-exceptions
   (fact "Match exception class"
@@ -93,34 +48,16 @@
                (ex-info? any any)
                (ex-info? any {:a 42})]))
 
-(deftest facts-for-test
-  (facts-for "multiple tests againts one value"
-    42
-    => integer?
-    => pos?)
-  (facts-for
-    42
-    => integer?
-    => pos?
-    =not=> string?
-    => any
-    => truthy
-    =not=> falsey)
-  (facts-for
-    "foo"
-    => string?
-    => "foo"))
-
 ;; For some reason (macroexpand '(...)) doesn't work with lein test
 ;; eval needs qualified macro name
 
 (deftest fact-arity
   (facts
     (eval '(testit.core/fact 1 => 1))
-    => some?
+    => nil?
 
     (eval '(testit.core/fact "foo" 1 => 1))
-    => some?
+    => nil?
 
     (eval '(testit.core/fact 1 :bad))
     =throws=> [any (ex-info? any {::s/problems [{:path [:args :arrow]
@@ -146,13 +83,13 @@
 (deftest facts-arity
   (facts
     (eval '(testit.core/facts 1 => 1))
-    => some?
+    => nil?
 
     (eval '(testit.core/facts "foo" 1 => 1))
-    => some?
+    => nil?
 
     (eval '(testit.core/facts "foo" 1 => 1, 2 => 2))
-    => some?
+    => nil?
 
     (eval '(testit.core/facts 1 => 1 :extra))
     =throws=> [any (ex-info? any {::s/problems [{:path [:args :body :arrow]
@@ -165,10 +102,10 @@
 (deftest facts-for-arity
   (facts
     (eval '(testit.core/facts-for 1, => 1, => number?))
-    => some?
+    => nil?
 
     (eval '(testit.core/facts-for "foo" 1, => 1, => number?))
-    => some?
+    => nil?
 
     (eval '(testit.core/facts-for "foo" 1, => 1, =>))
     =throws=> [any (ex-info? any {::s/problems [{:path [:args :fact-forms :expected]

@@ -1,13 +1,11 @@
 (ns testit.in-test
-  (:require [clojure.test :refer :all]
-            [testit.core :refer :all]
-            [testit.in :as in]))
+  (:require [clojure.test :refer [deftest]]
+            [testit.core :as t :refer [fact facts => =in=>]]
+            [testit.in :as in]
+            [testit.macros :refer [deep]]))
 
 (defn my-pos? [v]
   (pos? v))
-
-(defmacro deep [expected actual]
-  `(in/deep-compare nil (quote ~expected) ~expected ~actual))
 
 (deftest deep-compare-values-test
   (fact "pass"
@@ -83,17 +81,17 @@
                                  :actual 3
                                  :message "did not expect more than 2 elements"}])
   (fact "and then some"
-    (deep [1 2 ...] [1 2 3]) =in=> [{:type :pass}
-                                    {:type :pass}])
+    (deep [1 2 ::t/and-then-some] [1 2 3]) =in=> [{:type :pass}
+                                                  {:type :pass}])
   (fact "and then some with same lengths"
-    (deep [1 2 ...] [1 2]) =in=> [{:type :pass}
-                                  {:type :pass}])
+    (deep [1 2 ::t/and-then-some] [1 2]) =in=> [{:type :pass}
+                                                {:type :pass}])
   (fact "and then some, but too few elements"
-    (deep [1 2 ...] [1]) =in=> [{:type :pass}
-                                {:type :fail
-                                 :expected 2
-                                 :actual nil
-                                 :message "expected more than 1 elements"}]))
+    (deep [1 2 ::t/and-then-some] [1]) =in=> [{:type :pass}
+                                              {:type :fail
+                                               :expected 2
+                                               :actual nil
+                                               :message "expected more than 1 elements"}]))
 
 (deftest deep-compare-maps-test
   (fact "empty maps"
@@ -165,5 +163,6 @@
     "foo" =in=> "foo")
   (fact
     "foo" =in=> string?)
-  (fact
-    "foo" =in=> java.lang.String))
+  #?(:clj
+     (fact
+       "foo" =in=> java.lang.String)))

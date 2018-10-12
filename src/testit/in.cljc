@@ -1,6 +1,16 @@
 (ns testit.in
-  (:require [clojure.test :refer :all]
-            [clojure.string :as str]))
+  (:refer-clojure :exclude [format])
+  (:require [clojure.string :as str]
+            [net.cgrand.macrovich :as macros]
+            #?(:cljs [goog.string.format])))
+
+(defn format [& args]
+  #?(:clj (apply clojure.core/format args)
+     :cljs (apply goog.string.format args)))
+
+(defn- regex? [value]
+  #?(:clj  (instance? java.util.regex.Pattern value)
+     :cljs (instance? js/RegExp value)))
 
 (defn deep-compare [path expected-form expected-value actual]
   (cond
@@ -14,16 +24,16 @@
         :actual actual}])
 
     ; expected is a class
-    (class? expected-value)
-    (let [pass? (instance? expected-value actual)]
-      [{:path path
-        :type (if pass? :pass :fail)
-        :message (format "(instance? %s %s) => %s"
-                         (.getName ^Class expected-value)
-                         (pr-str actual)
-                         (pr-str pass?))
-        :expected expected-form
-        :actual actual}])
+    #?@(:clj [(class? expected-value)
+              (let [pass? (instance? expected-value actual)]
+                [{:path path
+                  :type (if pass? :pass :fail)
+                  :message (format "(instance? %s %s) => %s"
+                                   (.getName ^Class expected-value)
+                                   (pr-str actual)
+                                   (pr-str pass?))
+                  :expected expected-form
+                  :actual actual}])])
 
     ; expected is vector:
     (vector? expected-value)
@@ -121,7 +131,7 @@
               (keys expected-value)))
 
     ; expected is a regexp:
-    (instance? java.util.regex.Pattern expected-value)
+    (regex? expected-value)
     (let [match? (re-find expected-value actual)]
       [{:path path
         :type (if match? :pass :fail)
@@ -197,32 +207,7 @@
            actual-value# ~actual]
        (->> (deep-compare [] expected-form# expected-value# actual-value#)
             (generate-report ~msg expected-form# actual-value#)))
-     (catch Throwable t#
-       {:type :error
-        :message ~msg
-        :expected ~expected
-        :actual t#})))
-
-(defn failed? [result-item]
-  (-> result-item :type (not= :pass)))
-
-(defmacro test-in-eventually [msg expected actual polling timeout]
-  `(try
-     (let [polling# ~polling
-           deadline# (+ (System/currentTimeMillis) ~timeout)
-           expected-form# (quote ~expected)
-           expected-value# ~expected
-           actual-fn# (fn [] ~actual)]
-       (loop []
-         (let [actual-value# (actual-fn#)
-               result# (deep-compare [] expected-form# expected-value# actual-value#)
-               now# (System/currentTimeMillis)]
-           (if (and (< now# deadline#)
-                    (some failed? result#))
-             (do (Thread/sleep polling#)
-                 (recur))
-             (generate-report ~msg expected-form# actual-value# result#)))))
-     (catch Throwable t#
+     (catch ~(macros/case :clj Throwable :cljs :default) t#
        {:type :error
         :message ~msg
         :expected ~expected

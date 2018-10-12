@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "karma": "^3.0.0",
+    "karma-cljs-test": "^0.1.0",
+    "karma-firefox-launcher": "^1.1.0"
+  }
+}
