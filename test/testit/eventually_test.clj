@@ -1,7 +1,8 @@
 (ns testit.eventually-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
-            [testit.core :refer :all]))
+            [testit.core :refer :all]
+            [testit.eventually :refer [eventually *eventually-timeout-ms*]]))
 
 (deftest ^:slow eventually-test
   (facts "immediatelly pass"
