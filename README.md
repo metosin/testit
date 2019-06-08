@@ -493,7 +493,7 @@ In the example above, the first fact passes but the second fails after 1 sec.
 
 ## License
 
-Copyright © 2017 [Metosin Oy](http://metosin.fi)
+Copyright © 2017-2019 [Metosin Oy](http://metosin.fi).
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
