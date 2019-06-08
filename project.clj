@@ -1,4 +1,4 @@
-(defproject metosin/testit "0.3.0"
+(defproject metosin/testit "0.4.0-SNAPSHOT"
   :description "Midje style assertions for clojure.test"
   :license {:name "Eclipse Public License", :url "http://www.eclipse.org/legal/epl-v10.html"}
 
@@ -7,6 +7,8 @@
                  [clj-http "3.4.1" :scope "test"]
                  [org.slf4j/slf4j-nop "1.7.25" :scope "test"]
                  [net.cgrand/macrovich "0.2.1"]]
+
+  :deploy-repositories [["releases" :clojars]]
 
   :profiles {:dev {:dependencies [[org.clojure/clojurescript "1.10.339"]]}}
 

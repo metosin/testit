@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2019-06-08)
 
-**[compare](https://github.com/metosin/testit/compare/0.3.0...master)**
+**[compare](https://github.com/metosin/testit/compare/0.3.0...0.4.0)**
 
 - ClojureScript support for `=>` and `=in=>`.
 
