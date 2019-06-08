@@ -1,4 +1,4 @@
-(defproject metosin/testit "0.4.0"
+(defproject metosin/testit "0.4.1-SNAPSHOT"
   :description "Midje style assertions for clojure.test"
   :license {:name "Eclipse Public License", :url "http://www.eclipse.org/legal/epl-v10.html"}
 
