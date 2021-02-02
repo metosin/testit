@@ -227,8 +227,8 @@ passes.
 
 By default the `=eventually=>` keeps evaluating and testing every 50 ms and 
 the timeout is 1 sec. You can change these by binding 
-`testit.core/*eventually-polling-ms*` and 
-`testit.core/*eventually-timeout-ms*`. For example, code below sets the 
+`testit.eventually/*eventually-polling-ms*` and 
+`testit.eventually/*eventually-timeout-ms*`. For example, code below sets the 
 timeout to 2 sec.
 
 ```clj
