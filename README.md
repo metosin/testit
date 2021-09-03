@@ -4,7 +4,7 @@
 
 Clojars dependency: `[metosin/testit "0.4.0"]`
 
-**Note**: This library is still under heavy development!
+**Status:** Deprecated.
 
 ## Goals and non-goals
 
@@ -227,8 +227,8 @@ passes.
 
 By default the `=eventually=>` keeps evaluating and testing every 50 ms and 
 the timeout is 1 sec. You can change these by binding 
-`testit.core/*eventually-polling-ms*` and 
-`testit.core/*eventually-timeout-ms*`. For example, code below sets the 
+`testit.eventually/*eventually-polling-ms*` and 
+`testit.eventually/*eventually-timeout-ms*`. For example, code below sets the 
 timeout to 2 sec.
 
 ```clj
@@ -490,6 +490,15 @@ In the example above, the first fact passes but the second fails after 1 sec.
 - [ ] Detect and complain about common mistakes like using multile `=>` forms with `fact`
 - [ ] Provide better error messages when right side is a predicate
 - [ ] Figure out a way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
+
+## Development
+
+Run tests with:
+
+```sh
+lein eftest
+lein doo once
+```
 
 ## License
 
