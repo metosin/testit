@@ -1,11 +1,10 @@
-# testit
-
-[![Build Status](https://github.com/metosin/PROJECTNAME/actions/workflows/clojure.yml/badge.svg)](https://github.com/metosin/PROJECTNAME/actions)
-[![Clojars Project](http://clojars.org/metosin/PROJECTNAME/latest-version.svg)](http://clojars.org/PROJECTNAME/ring-http-response)
+# testit [![Build Status](https://github.com/metosin/testit/actions/workflows/clojure.yml/badge.svg)](https://github.com/metosin/testit/actions)
 
 [Midje](https://github.com/marick/Midje) style assertions for `clojure.test`
 
-Clojars dependency: `[metosin/testit "0.4.0"]`
+Clojars dependency:
+
+[![Clojars Project](http://clojars.org/metosin/testit/latest-version.svg)](http://clojars.org/metosin/testit)
 
 **Status:** Deprecated.
 
