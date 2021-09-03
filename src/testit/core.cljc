@@ -30,7 +30,9 @@
 #?(:clj (s/fdef fact :args ::fact))
 
 #?(:clj
-   (defmacro fact [& form]
+   (defmacro fact
+     {:style/indent 1}
+     [& form]
      (let [{:keys [name value arrow expected]} (s/conform ::fact form)
            msg (or name (str (pr-str value) " " arrow " " expected))]
        `(try
@@ -50,7 +52,9 @@
 
 #?(:clj (s/fdef facts :args ::facts))
 
-#?(:clj (defmacro facts [& form]
+#?(:clj (defmacro facts
+          {:style/indent 1}
+          [& form]
           (let [{:keys [name body]} (s/conform ::facts form)]
             `(testing ~name
                ~@(for [{:keys [value arrow expected]} body]
@@ -64,7 +68,9 @@
 #?(:clj (s/fdef facts-for :args ::facts-for))
 
 #?(:clj
-   (defmacro facts-for [& forms]
+   (defmacro facts-for
+     {:style/indent 1}
+     [& forms]
      (let [{:keys [name form-to-test fact-forms]} (s/conform ::facts-for forms)
            result (gensym)]
        `(testing ~name
