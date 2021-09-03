@@ -4,7 +4,7 @@
 
 Clojars dependency: `[metosin/testit "0.4.0"]`
 
-**Note**: This library is still under heavy development!
+**Status:** Deprecated.
 
 ## Goals and non-goals
 
