@@ -9,7 +9,9 @@
                  [org.slf4j/slf4j-nop "1.7.25" :scope "test"]
                  [net.cgrand/macrovich "0.2.1"]]
 
-  :deploy-repositories [["releases" :clojars]]
+  :deploy-repositories [["clojars" {:url "https://clojars.org/repo"
+                                    :sign-releases false}]
+                        ["releases" :clojars]]
 
   :profiles {:dev {:dependencies [[org.clojure/clojurescript "1.10.879"]]}}
 
