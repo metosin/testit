@@ -47,4 +47,4 @@ jobs:
     - name: Install NPM dependencies
       run: npm ci
     - name: Run tests
-      run: lein doo once
+      run: lein doo firefox-headless test once
