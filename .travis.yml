@@ -1,9 +1,0 @@
-sudo: false
-language: clojure
-lein: 2.8.1
-script: lein do eftest, check
-jdk:
-  - openjdk8
-cache:
-  directories:
-    - $HOME/.m2
