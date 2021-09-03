@@ -6,7 +6,7 @@ Clojars dependency:
 
 [![Clojars Project](http://clojars.org/metosin/testit/latest-version.svg)](http://clojars.org/metosin/testit)
 
-**Status:** Deprecated.
+[**Status:**](https://github.com/metosin/open-source#project-lifecycle-model) Deprecated: not actively maintained nor recommended for new projects
 
 ## Goals and non-goals
 
