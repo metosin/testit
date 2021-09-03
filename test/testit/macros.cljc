@@ -1,5 +1,6 @@
 (ns testit.macros
-  (:require [testit.in :as in]))
+  (:require [testit.in :as in])
+  #?(:cljs (:require-macros testit.macros)))
 
-(defmacro deep [expected actual]
-  `(in/deep-compare nil (quote ~expected) ~expected ~actual))
+#?(:clj (defmacro deep [expected actual]
+          `(in/deep-compare nil (quote ~expected) ~expected ~actual)))

@@ -491,6 +491,15 @@ In the example above, the first fact passes but the second fails after 1 sec.
 - [ ] Provide better error messages when right side is a predicate
 - [ ] Figure out a way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
 
+## Development
+
+Run tests with:
+
+```sh
+lein eftest
+lein doo once
+```
+
 ## License
 
 Copyright © 2017-2019 [Metosin Oy](http://metosin.fi).

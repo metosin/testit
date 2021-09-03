@@ -11,12 +11,13 @@
 
   :deploy-repositories [["releases" :clojars]]
 
-  :profiles {:dev {:dependencies [[org.clojure/clojurescript "1.10.339"]]}}
+  :profiles {:dev {:dependencies [[org.clojure/clojurescript "1.10.879"]]}}
 
   :test-paths ["test" "examples"]
 
-  :plugins [[lein-eftest "0.5.3"]
-            [lein-doo "0.1.10"]]
+  :plugins [[lein-cljfmt "0.8.0"]
+            [lein-eftest "0.5.9"]
+            [lein-doo "0.1.11"]]
 
   :cljsbuild
   {:builds [{:id "test"
@@ -25,7 +26,9 @@
                         :main "testit.runner"
                         :optimizations :none}}]}
 
-  :doo {:build "test"}
+  :doo {:build "test"
+        :alias {:default [:firefox]}
+        :paths {:karma "./node_modules/karma/bin/karma"}}
 
   :test-selectors {:default (complement :slow)
                    :slow :slow

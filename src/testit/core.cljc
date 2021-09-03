@@ -5,7 +5,8 @@
             [testit.assert :refer [assert-arrow format-expected]]
             [net.cgrand.macrovich :as macros]
             #?(:clj [testit.eventually])
-            #?(:clj [testit.throws])))
+            #?(:clj [testit.throws]))
+  #?(:cljs (:require-macros testit.core)))
 
 ;;
 ;; Common predicates:
@@ -26,51 +27,50 @@
                      :arrow symbol?
                      :expected any?))
 
-(s/fdef fact
-  :args ::fact)
+#?(:clj (s/fdef fact :args ::fact))
 
-(defmacro fact [& form]
-  (let [{:keys [name value arrow expected]} (s/conform ::fact form)
-        msg (or name (str (pr-str value) " " arrow " " expected))]
-    `(try
-       ~(assert-arrow {:arrow arrow
-                       :msg msg
-                       :actual value
-                       :expected expected
-                       :form form})
-       (catch ~(macros/case :clj Throwable :cljs :default) t#
-         (do-report {:type :error, :message ~msg,
-                     :expected '~form, :actual t#})))))
+#?(:clj
+   (defmacro fact [& form]
+     (let [{:keys [name value arrow expected]} (s/conform ::fact form)
+           msg (or name (str (pr-str value) " " arrow " " expected))]
+       `(try
+          ~(assert-arrow {:arrow arrow
+                          :msg msg
+                          :actual value
+                          :expected expected
+                          :form form})
+          (catch ~(macros/case :clj Throwable :cljs :default) t#
+            (do-report {:type :error, :message ~msg,
+                        :expected '~form, :actual t#}))))))
 
 (s/def ::facts (s/cat :name (s/? string?)
                       :body (s/* (s/cat :value any?
                                         :arrow symbol?
                                         :expected any?))))
 
-(s/fdef facts
-  :args ::facts)
+#?(:clj (s/fdef facts :args ::facts))
 
-(defmacro facts [& form]
-  (let [{:keys [name body]} (s/conform ::facts form)]
-    `(testing ~name
-       ~@(for [{:keys [value arrow expected]} body]
-           `(fact ~value ~arrow ~expected)))))
+#?(:clj (defmacro facts [& form]
+          (let [{:keys [name body]} (s/conform ::facts form)]
+            `(testing ~name
+               ~@(for [{:keys [value arrow expected]} body]
+                   `(fact ~value ~arrow ~expected))))))
 
 (s/def ::facts-for (s/cat :name (s/? string?)
                           :form-to-test any?
                           :fact-forms (s/* (s/cat :arrow symbol?
                                                   :expected any?))))
 
-(s/fdef facts-for
-  :args ::facts-for)
+#?(:clj (s/fdef facts-for :args ::facts-for))
 
-(defmacro facts-for [& forms]
-  (let [{:keys [name form-to-test fact-forms]} (s/conform ::facts-for forms)
-        result (gensym)]
-    `(testing ~name
-       (let [~result ~form-to-test]
-         ~@(for [{:keys [arrow expected]} fact-forms]
-             `(fact ~result ~arrow ~expected))))))
+#?(:clj
+   (defmacro facts-for [& forms]
+     (let [{:keys [name form-to-test fact-forms]} (s/conform ::facts-for forms)
+           result (gensym)]
+       `(testing ~name
+          (let [~result ~form-to-test]
+            ~@(for [{:keys [arrow expected]} fact-forms]
+                `(fact ~result ~arrow ~expected)))))))
 
 ;;
 ;; Extending clojure.test for => and =not=>

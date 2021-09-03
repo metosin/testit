@@ -2,7 +2,8 @@
   (:refer-clojure :exclude [format])
   (:require [clojure.string :as str]
             [net.cgrand.macrovich :as macros]
-            #?(:cljs [goog.string.format])))
+            #?(:cljs [goog.string.format]))
+  #?(:cljs (:require-macros testit.in)))
 
 (defn format [& args]
   #?(:clj (apply clojure.core/format args)
@@ -200,15 +201,16 @@
      :expected expected
      :actual actual}))
 
-(defmacro test-in [msg expected actual]
-  `(try
-     (let [expected-form# (quote ~expected)
-           expected-value# ~expected
-           actual-value# ~actual]
-       (->> (deep-compare [] expected-form# expected-value# actual-value#)
-            (generate-report ~msg expected-form# actual-value#)))
-     (catch ~(macros/case :clj Throwable :cljs :default) t#
-       {:type :error
-        :message ~msg
-        :expected ~expected
-        :actual t#})))
+#?(:clj
+   (defmacro test-in [msg expected actual]
+     `(try
+        (let [expected-form# (quote ~expected)
+              expected-value# ~expected
+              actual-value# ~actual]
+          (->> (deep-compare [] expected-form# expected-value# actual-value#)
+               (generate-report ~msg expected-form# actual-value#)))
+        (catch ~(macros/case :clj Throwable :cljs :default) t#
+          {:type :error
+           :message ~msg
+           :expected ~expected
+           :actual t#}))))
