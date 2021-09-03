@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 (2021-09-03)
+
+**[compare](https://github.com/metosin/testit/compare/0.4.0...0.4.1)**
+
+- Add style/indent metadata to the three fact* macros [#19](https://github.com/metosin/testit/pull/19)
+- Fix the ClojureScript support [commit](https://github.com/metosin/testit/commit/2938e75c9716af6cc731b2bac618a445a47f3277)
+
 ## 0.4.0 (2019-06-08)
 
 **[compare](https://github.com/metosin/testit/compare/0.3.0...0.4.0)**
