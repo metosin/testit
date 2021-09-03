@@ -1,4 +1,7 @@
-# testit [![Build Status](https://api.travis-ci.org/metosin/testit.svg?branch=master)](https://travis-ci.org/metosin/testit)
+# testit
+
+[![Build Status](https://github.com/metosin/PROJECTNAME/actions/workflows/clojure.yml/badge.svg)](https://github.com/metosin/PROJECTNAME/actions)
+[![Clojars Project](http://clojars.org/metosin/PROJECTNAME/latest-version.svg)](http://clojars.org/PROJECTNAME/ring-http-response)
 
 [Midje](https://github.com/marick/Midje) style assertions for `clojure.test`
 
@@ -502,7 +505,7 @@ lein doo once
 
 ## License
 
-Copyright © 2017-2019 [Metosin Oy](http://metosin.fi).
+Copyright © 2017-2021 [Metosin Oy](http://metosin.fi).
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
