@@ -504,7 +504,7 @@ lein doo once
 
 ## License
 
-Copyright © 2017-2021 [Metosin Oy](http://metosin.fi).
+Copyright © 2017-2022 [Metosin Oy](http://metosin.fi).
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
