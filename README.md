@@ -313,7 +313,7 @@ The matching is recursive, so this works too:
   [{:a 1, :b 1}
    {:a 2, :b 2}
    {:a 3, :b 3}]
-  => 
+  =in=> 
   [{:a 1}, map?, {:b pos?}])
 ```
 
@@ -489,7 +489,7 @@ In the example above, the first fact passes but the second fails after 1 sec.
 
 - [x] Implement `=eventually=>` for async tests
 - [x] Add support to comparing seq's and lists
-- [ ] Detect and complain about common mistakes like using multile `=>` forms with `fact`
+- [ ] Detect and complain about common mistakes like using multiple `=>` forms with `fact`
 - [ ] Provide better error messages when right side is a predicate
 - [ ] Figure out a way to support [humane-test-output](https://github.com/pjstadig/humane-test-output) style output
 
@@ -504,7 +504,7 @@ lein doo once
 
 ## License
 
-Copyright © 2017-2021 [Metosin Oy](http://metosin.fi).
+Copyright © 2017-2022 [Metosin Oy](http://metosin.fi).
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
